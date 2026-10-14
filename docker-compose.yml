@@ -1,0 +1,9 @@
+services:
+  ingest:
+    build: .
+    container_name: telelab-ingest
+    restart: unless-stopped
+    ports:
+      - "31600:31600/udp"
+    volumes:
+      - ./data/recordings:/data/recordings

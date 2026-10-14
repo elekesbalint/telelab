@@ -1,0 +1,10 @@
+# build output
+/bin/
+/dist/
+
+# local data and recordings
+/data/
+*.tlrec
+
+# EA spec files are copyrighted; keep them locally, do not commit
+/spec/
