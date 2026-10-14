@@ -8,3 +8,6 @@
 
 # EA spec files are copyrighted; keep them locally, do not commit
 /spec/
+
+# secrets
+.env

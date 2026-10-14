@@ -1,6 +1,6 @@
 // Package live keeps the latest decoded packets of one game feed (one driver,
-// one UDP port) in memory. Later phases serve this state over WebSocket;
-// for now telelab-ingest prints a summary of it.
+// one UDP port) in memory and renders snapshots of it for the web views and
+// a text summary for the console.
 package live
 
 import (
@@ -27,10 +27,19 @@ type State struct {
 	Telemetry2   *f1udp.PacketCarTelemetry2Data
 	Status       *f1udp.PacketCarStatusData
 	Damage       *f1udp.PacketCarDamageData
+	Motion       *f1udp.PacketMotionData
+	History      [f1udp.MaxCars]*f1udp.PacketSessionHistoryData
 
 	Counts     map[f1udp.PacketID]uint64
 	Errors     uint64
-	LastEvents []f1udp.Event
+	LastEvents []f1udp.Event // consumed by TakeEvents (console output)
+	Recent     []TimedEvent  // last events for the web views, not consumed
+}
+
+// TimedEvent is an event with the session time it happened at.
+type TimedEvent struct {
+	SessionTime float32
+	f1udp.Event
 }
 
 // New returns an empty state.
@@ -46,7 +55,8 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.SessionUID = h.SessionUID
 		s.Session, s.Participants, s.Lap = nil, nil, nil
 		s.Telemetry, s.Telemetry2, s.Status, s.Damage = nil, nil, nil, nil
-		s.LastEvents = nil
+		s.Motion, s.History = nil, [f1udp.MaxCars]*f1udp.PacketSessionHistoryData{}
+		s.LastEvents, s.Recent = nil, nil
 	}
 	s.PlayerIdx = h.PlayerCarIndex
 	s.LastPacketAt = time.Now()
@@ -67,6 +77,12 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.Status = v
 	case *f1udp.PacketCarDamageData:
 		s.Damage = v
+	case *f1udp.PacketMotionData:
+		s.Motion = v
+	case *f1udp.PacketSessionHistoryData:
+		if int(v.CarIdx) < f1udp.MaxCars {
+			s.History[v.CarIdx] = v
+		}
 	case *f1udp.PacketEventData:
 		e := v.Event()
 		if e.Code == f1udp.EventButtons {
@@ -75,6 +91,10 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.LastEvents = append(s.LastEvents, e)
 		if len(s.LastEvents) > 10 {
 			s.LastEvents = s.LastEvents[len(s.LastEvents)-10:]
+		}
+		s.Recent = append(s.Recent, TimedEvent{SessionTime: h.SessionTime, Event: e})
+		if len(s.Recent) > 30 {
+			s.Recent = s.Recent[len(s.Recent)-30:]
 		}
 	}
 }

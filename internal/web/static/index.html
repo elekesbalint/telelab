@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <label class="feed-pick">
+    <span class="sr">Pilóta</span>
+    <select id="feed"></select>
+  </label>
+  <p class="session" id="session">Nincs kiválasztott feed</p>
+  <p class="conn" id="conn" data-state="off">Nincs kapcsolat</p>
+</header>
+
+<main id="app">
+  <section class="empty" id="empty" hidden>
+    <h1>Még nem jön adat ezen a porton</h1>
+    <p>A játékban a Telemetry Settings alatt add meg: UDP IP-cím <b id="empty-ip"></b>, port <b id="empty-port"></b>, UDP Format 2026, Send Rate 60 Hz. Amint kimész a pályára, itt megjelenik minden.</p>
+  </section>
+
+  <div id="live" hidden>
+    <section class="trace" aria-label="Gáz, fék és sebesség az utolsó 20 másodpercben">
+      <canvas id="trace"></canvas>
+      <ul class="legend">
+        <li class="l-speed">Sebesség</li><li class="l-thr">Gáz</li><li class="l-brk">Fék</li>
+      </ul>
+    </section>
+
+    <div class="grid">
+      <section class="panel drive">
+        <div class="speed"><b id="speed">0</b><span>km/h</span></div>
+        <div class="gear" id="gear">N</div>
+        <div class="rpm"><i id="rpm-bar"></i></div>
+        <dl class="kv">
+          <div><dt>Fordulat</dt><dd id="rpm">–</dd></div>
+          <div><dt>Motor</dt><dd id="engine">–</dd></div>
+          <div><dt>Fékerő-elosztás</dt><dd id="bias">–</dd></div>
+        </dl>
+        <div class="pedals">
+          <div><span>Gáz</span><i class="thr"><b id="thr-bar"></b></i></div>
+          <div><span>Fék</span><i class="brk"><b id="brk-bar"></b></i></div>
+        </div>
+      </section>
+
+      <section class="panel timing">
+        <div class="pos"><b id="pos">–</b><span id="lap">Kör –</span></div>
+        <div class="laptime">
+          <b id="cur">–</b>
+          <span id="invalid" hidden>Érvénytelen kör</span>
+        </div>
+        <div class="sectors">
+          <div><span>S1</span><b id="s1">–</b></div>
+          <div><span>S2</span><b id="s2">–</b></div>
+          <div><span>Szektor</span><b id="sector">–</b></div>
+        </div>
+        <dl class="kv">
+          <div><dt>Utolsó kör</dt><dd id="last">–</dd></div>
+          <div><dt>Legjobb kör</dt><dd id="best">–</dd></div>
+          <div><dt>Előtte lévő autó</dt><dd id="gap">–</dd></div>
+          <div><dt>Az élhez képest</dt><dd id="leader">–</dd></div>
+          <div><dt>Büntetés, figyelmeztetés</dt><dd id="pen">–</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel tyres">
+        <h2><span id="compound" class="compound">–</span> <span id="tyre-age"></span></h2>
+        <div class="car">
+          <div class="tyre" id="t2"></div><div class="tyre" id="t3"></div>
+          <div class="tyre" id="t0"></div><div class="tyre" id="t1"></div>
+        </div>
+        <p class="hint">Felület / mag °C, kopás %, fékhő °C</p>
+      </section>
+
+      <section class="panel energy">
+        <div class="meter">
+          <div class="meter-head"><span>ERS</span><b id="ers">–</b><em id="ers-mode">–</em></div>
+          <i class="track"><b id="ers-bar"></b></i>
+          <p id="ers-lap">–</p>
+        </div>
+        <div class="meter">
+          <div class="meter-head"><span>Üzemanyag</span><b id="fuel">–</b><em id="fuel-laps">–</em></div>
+          <p id="fuel-mix">–</p>
+        </div>
+        <ul class="flags">
+          <li id="f-aero">Aktív aero</li>
+          <li id="f-ot">Overtake</li>
+          <li id="f-drs">DRS</li>
+        </ul>
+        <dl class="kv" id="damage"></dl>
+      </section>
+    </div>
+
+    <div class="lower">
+      <section class="panel standings">
+        <h2>Állás</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Poz.</th><th>Pilóta</th><th>Gap</th><th>Int.</th><th>Utolsó</th><th>Legjobb</th><th>Gumi</th><th>Box</th><th>ERS</th></tr></thead>
+            <tbody id="cars"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel events">
+        <h2>Versenyirányítás</h2>
+        <ol id="events"></ol>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="app.js" type="module"></script>
+</body>
+</html>

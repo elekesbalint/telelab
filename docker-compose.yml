@@ -1,9 +1,53 @@
 services:
-  ingest:
-    build: .
-    container_name: telelab-ingest
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: telelab-db
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: telelab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: telelab
+    volumes:
+      - ./data/pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telelab -d telelab"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    container_name: telelab-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://telelab:${POSTGRES_PASSWORD}@db:5432/telelab?sslmode=disable
+      TELELAB_UDP_PORTS: 31600-31619
+      TELELAB_HTTP_ADDR: :8080
+      TELELAB_RECORD_DIR: /data/recordings
+      TELELAB_RECORD_DAYS: ${RECORD_DAYS:-7}
+      TELELAB_PUBLIC_IP: ${PUBLIC_IP:-}
     ports:
-      - "31600:31600/udp"
+      - "31600-31619:31600-31619/udp"
     volumes:
       - ./data/recordings:/data/recordings
+
+  caddy:
+    image: caddy:2
+    container_name: telelab-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?set BASIC_AUTH_USER in .env}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?set BASIC_AUTH_HASH in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
