@@ -187,15 +187,17 @@ function render() {
   if (!focus) {
     $("wx-temps").innerHTML = `<p class="dv-muted">No car telemetry yet.</p>`;
   } else {
+    // Big number = tyre core (UDP inner) — same as the top MFD reading in-game.
     $("wx-temps").innerHTML = `<div class="wx-tyre-grid">${WHEELS.map(({ i, label }) => {
+      const core = focus.tyreInner?.[i] ?? 0;
       const surf = focus.tyreSurface?.[i] ?? 0;
       const press = focus.tyrePressure?.[i];
       const wear = focus.tyreWear?.[i] ?? 0;
-      const cls = surf < 70 ? "cold" : surf > 105 ? "hot" : "ok";
+      const cls = core < 70 ? "cold" : core > 105 ? "hot" : "ok";
       return `<div class="wx-tyre ${cls}">
         <span>${label}</span>
-        <b>${surf}°C</b>
-        <small>${press != null ? `${press.toFixed(1)} PSI` : "–"} · wear ${wear.toFixed(1)}%</small>
+        <b>${core}°C</b>
+        <small>${press != null ? `${press.toFixed(1)} PSI` : "–"} · wear ${wear.toFixed(1)}% · surf ${surf}°C</small>
         <em class="tt-tyre-pill" style="--c:${COMPOUND[focus.compound] || "var(--line)"}">${escapeHtml(focus.compound || "–")}</em>
       </div>`;
     }).join("")}</div>`;
