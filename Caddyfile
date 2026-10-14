@@ -1,12 +1,7 @@
 # HTTPS for the TeleLab web UI. Caddy gets a Let's Encrypt certificate
-# automatically once DNS points DOMAIN to this server.
-#
-# Until Discord login is built, the whole site is behind one shared
-# username/password (BASIC_AUTH_USER / BASIC_AUTH_HASH in .env).
+# automatically once DNS points DOMAIN to this server. Login is handled by
+# the app itself (Discord).
 {$DOMAIN} {
 	encode zstd gzip
-	basic_auth {
-		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
-	}
 	reverse_proxy app:8080
 }

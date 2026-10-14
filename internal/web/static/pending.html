@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jóváhagyásra vár · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="gate">
+<main class="gate-box">
+  <p class="brand">Tele<span>Lab</span></p>
+  <h1 id="title">A belépésed jóváhagyásra vár</h1>
+  <p class="lead">Nem találtunk a csapat Discord-szerverén. Szólj a csapattulajdonosnak, hogy hagyja jóvá a hozzáférésed a Csapat oldalon. Ha közben belépsz a csapat szerverére, jelentkezz be újra, és automatikusan bejutsz.</p>
+  <form method="post" action="/auth/logout"><button class="discord" type="submit">Kilépés és újra belépés</button></form>
+</main>
+<script type="module">
+  const me = await (await fetch("/api/me")).json().catch(() => null);
+  if (me && me.role !== "pending") location.href = "/";
+  else if (me) document.getElementById("title").textContent = `Szia ${me.displayName}, a belépésed jóváhagyásra vár`;
+</script>
+</body>
+</html>

@@ -25,6 +25,16 @@ b, dd, td, .num { font-variant-numeric: tabular-nums; }
 .bar { display: flex; align-items: center; gap: 20px; padding: 12px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .brand { font: 700 24px/1 var(--num); color: var(--chalk); text-decoration: none; letter-spacing: .01em; }
 .brand span { color: var(--amber); }
+.nav { display: flex; gap: 4px; }
+.nav a { color: var(--dim); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+.nav a:hover { color: var(--chalk); }
+.nav a[aria-current="page"] { color: var(--chalk); background: var(--panel); box-shadow: inset 0 -2px 0 var(--amber); }
+.me { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 14px; }
+.me img { width: 28px; height: 28px; border-radius: 50%; }
+.me form { margin: 0; }
+.me button, .btn { background: none; border: 1px solid var(--line); color: var(--chalk); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.me button:hover, .btn:hover { border-color: var(--dim); }
+.empty a, .page a { color: var(--amber); }
 .feed-pick select { background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: inherit; min-width: 220px; }
 .session { margin: 0; color: var(--dim); flex: 1; }
 .conn { margin: 0; color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 8px; }
@@ -136,7 +146,47 @@ td.pit { color: var(--amber); }
 @media (max-width: 640px) {
   .bar, main { padding-left: 16px; padding-right: 16px; }
   .grid { grid-template-columns: 1fr; }
-  .feed-pick select { min-width: 0; width: 100%; }
+  .nav { display: flex; gap: 4px; }
+.nav a { color: var(--dim); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+.nav a:hover { color: var(--chalk); }
+.nav a[aria-current="page"] { color: var(--chalk); background: var(--panel); box-shadow: inset 0 -2px 0 var(--amber); }
+.me { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 14px; }
+.me img { width: 28px; height: 28px; border-radius: 50%; }
+.me form { margin: 0; }
+.me button, .btn { background: none; border: 1px solid var(--line); color: var(--chalk); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.me button:hover, .btn:hover { border-color: var(--dim); }
+.empty a, .page a { color: var(--amber); }
+.feed-pick select { min-width: 0; width: 100%; }
   .trace { height: 120px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* login & waiting pages */
+.gate { display: grid; place-items: center; min-height: 100vh; padding: 24px; }
+.gate-box { max-width: 460px; }
+.gate .brand { font-size: 40px; margin: 0 0 28px; }
+.gate h1 { font: 600 30px/1.15 var(--num); margin: 0 0 12px; }
+.gate .lead { color: var(--dim); margin: 0 0 28px; }
+.discord { display: inline-flex; align-items: center; gap: 10px; background: #5865f2; color: #fff; border: 0; border-radius: 8px; padding: 12px 20px; font: 600 16px var(--text); text-decoration: none; cursor: pointer; }
+.discord:hover { background: #4752c4; }
+.error { color: var(--brk); margin-top: 16px; }
+.credit { color: var(--dim); font-size: 13px; margin-top: 48px; }
+
+/* content pages (connect, team) */
+.page { max-width: 1100px; }
+.page h1 { font: 600 32px/1.15 var(--num); margin: 8px 0 6px; }
+.page > p.lead { color: var(--dim); margin: 0 0 24px; max-width: 70ch; }
+.port-hero { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+.port-hero .panel { flex: 1 1 240px; }
+.port-hero span { display: block; color: var(--dim); font-size: 13px; }
+.port-hero b { font: 600 44px/1.1 var(--num); }
+.settings td:first-child { font-family: var(--text); color: var(--dim); }
+.status { display: inline-flex; align-items: center; gap: 6px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.status.live::before { background: var(--thr); }
+.team select { background: var(--asphalt); color: var(--chalk); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+.team td { vertical-align: middle; }
+.who { display: flex; align-items: center; gap: 10px; font-family: var(--text); }
+.who img, .who i { width: 28px; height: 28px; border-radius: 50%; background: var(--line); flex: none; }
+.who small { display: block; color: var(--dim); font-size: 12px; }
+.notice { color: var(--amber); min-height: 1.4em; }

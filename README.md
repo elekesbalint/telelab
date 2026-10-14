@@ -4,7 +4,7 @@
 
 A játék UDP-n küldi az adatokat a szerverre, a TeleLab ebből élő mérnöki nézeteket, kör-összehasonlítást, ranglistákat és stratégiai modelleket készít.
 
-> Állapot: **1. fázis.** UDP-fogadás, adatbázis (sessionök, körök, telemetria), élő Driver View a weben.
+> Állapot: **1. fázis.** UDP-fogadás, adatbázis (sessionök, körök, telemetria), élő Driver View, Discordos belépés, csapat- és portkezelés.
 
 ## Mi van a repóban
 
@@ -16,33 +16,31 @@ A játék UDP-n küldi az adatokat a szerverre, a TeleLab ebből élő mérnöki
 | `internal/store` | PostgreSQL / TimescaleDB séma és írás. |
 | `internal/live` | Élő állapot és a webes nézetnek küldött pillanatkép. |
 | `internal/web` | REST API, élő WebSocket, beágyazott webes felület (`static/`). |
+| `internal/auth` | Belépés Discorddal, munkamenet-süti, jogosultságok. |
 | `internal/record` | Nyers csomagok tömörített felvétele (`.tlrec`). |
 | `cmd/telelab-ingest` | Egyszerű konzolos fogadó hibakereséshez. |
 | `cmd/telelab-replay`, `cmd/telelab-fakegame` | Felvétel visszajátszása, szimulált adatok – fejlesztéshez. |
 
 ## Telepítés a VPS-en
 
-Előfeltétel: a `DOMAIN` DNS A-rekordja a VPS IP-címére mutat, a 80-as és 443-as port szabad.
+Előfeltételek: a `DOMAIN` DNS A-rekordja a VPS IP-címére mutat, a 80-as és 443-as port szabad, és van egy Discord-alkalmazás (discord.com/developers/applications → OAuth2) ezzel a Redirect címmel: `https://<DOMAIN>/auth/discord/callback`.
 
 ```bash
-cd telelab
-git pull
-cp .env.example .env
-docker run --rm caddy:2 caddy hash-password --plaintext 'valami-jelszo'   # a kimenetet tedd a .env-be
-nano .env                                                                   # töltsd ki
-mkdir -p data/recordings && chown 10001:10001 data/recordings
-docker compose up -d --build --remove-orphans
-docker compose logs -f app
+cd ~/telelab && GIT_SSH_COMMAND="ssh -i ~/.ssh/telelab" git pull && bash scripts/install.sh
 ```
 
-Frissítés: `git pull && docker compose up -d --build`.
-Leállítás: `docker compose down` (az adatok a `data/` mappában maradnak).
+Az első futáskor a szkript létrehozza a `.env`-et, és bekéri a Discord Client ID-t, Client Secretet és a csapat Discord-szerverének azonosítóját. Később ugyanez a parancs frissít.
+
+Belépés és jogosultságok:
+- aki **elsőként** lép be, az lesz a **tulajdonos**;
+- aki tagja a csapat Discord-szerverének, automatikusan **pilóta** lesz, és kap egy szabad UDP portot;
+- mindenki más **jóváhagyásra vár**, amíg a tulajdonos a Csapat oldalon nem engedélyezi.
 
 | Szolgáltatás | Mit csinál |
 | --- | --- |
 | `db` | PostgreSQL 16 + TimescaleDB, adatok: `data/pg` |
 | `app` | TeleLab szerver, UDP 31600–31619, felvételek: `data/recordings` (7 nap után törlődnek) |
-| `caddy` | HTTPS a `DOMAIN`-en, automatikus tanúsítvány, ideiglenes jelszavas belépés |
+| `caddy` | HTTPS a `DOMAIN`-en, automatikus tanúsítvány |
 
 ## Beállítás a játékban
 
@@ -61,7 +59,7 @@ Game Options → Settings → Telemetry Settings:
 
 ```bash
 go test ./...                                     # tesztek
-go run ./cmd/telelab-server                       # adatbázis nélkül, http://localhost:8080
+TELELAB_AUTH=off go run ./cmd/telelab-server      # belépés és adatbázis nélkül, http://localhost:8080
 go run ./cmd/telelab-fakegame                     # másik terminálban
 go run ./cmd/telelab-replay -speed 2 data/recordings/<fájl>.tlrec
 ```

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # TeleLab install / update script for the VPS.
 #   bash scripts/install.sh
-# First run: asks for the web password, creates .env, starts everything.
+# First run: creates .env, asks for the Discord login settings, starts everything.
 # Later runs: rebuilds and restarts with the existing .env.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -29,31 +29,51 @@ if [ ! -f .env ]; then
   read -rp "Webcím [$DOMAIN_DEFAULT]: " domain
   domain=${domain:-$DOMAIN_DEFAULT}
   ip=$(curl -fsS4 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
-  read -rp "Felhasználónév a webes belépéshez [telelab]: " user
-  user=${user:-telelab}
-  while true; do
-    read -rsp "Jelszó a webes belépéshez: " pw1; echo
-    read -rsp "Jelszó még egyszer: " pw2; echo
-    [ -n "$pw1" ] && [ "$pw1" = "$pw2" ] && break
-    echo "A két jelszó nem egyezik vagy üres, próbáld újra."
-  done
-  echo "Jelszó titkosítása..."
-  hash=$(docker run --rm caddy:2 caddy hash-password --plaintext "$pw1")
-  unset pw1 pw2
-  dbpw=$(openssl rand -hex 24)
-  umask 077
-  cat > .env <<EOF
-DOMAIN=$domain
-PUBLIC_IP=$ip
-POSTGRES_PASSWORD=$dbpw
-BASIC_AUTH_USER=$user
-BASIC_AUTH_HASH='$hash'
-RECORD_DAYS=7
-EOF
+  (
+    umask 077
+    {
+      echo "DOMAIN=$domain"
+      echo "PUBLIC_IP=$ip"
+      echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
+      echo "RECORD_DAYS=7"
+    } > .env
+  )
   echo ".env kész (webcím: $domain, szerver IP: $ip)."
 else
   say "Meglévő .env használata"
 fi
+
+# setvar NAME VALUE: replace or append a line in .env
+setvar() {
+  local tmp
+  tmp=$(mktemp)
+  grep -v "^$1=" .env > "$tmp" || true
+  printf '%s=%s\n' "$1" "$2" >> "$tmp"
+  cat "$tmp" > .env
+  rm -f "$tmp"
+}
+getvar() { grep "^$1=" .env | head -1 | cut -d= -f2- || true; }
+
+# Discord login settings: asked once (also when upgrading an older .env).
+if [ -z "$(getvar DISCORD_CLIENT_ID)" ] || [ -z "$(getvar DISCORD_CLIENT_SECRET)" ]; then
+  domain=$(getvar DOMAIN)
+  say "Discord-belépés beállítása"
+  echo "A Discord Developer Portalon (OAuth2) ezt a Redirect címet kell megadni:"
+  echo "  https://$domain/auth/discord/callback"
+  read -rp "Discord Client ID: " cid
+  read -rsp "Discord Client Secret (gépelés közben nem látszik): " csec; echo
+  read -rp "Csapat Discord-szerverének azonosítója (Server ID): " gid
+  [ -n "$cid" ] && [ -n "$csec" ] || die "a Client ID és a Client Secret kötelező"
+  setvar DISCORD_CLIENT_ID "$cid"
+  setvar DISCORD_CLIENT_SECRET "$csec"
+  setvar DISCORD_GUILD_ID "$gid"
+  unset csec
+  # the temporary shared web password is no longer used
+  grep -v '^BASIC_AUTH_' .env > .env.tmp || true
+  cat .env.tmp > .env && rm -f .env.tmp
+  echo "Discord-beállítások elmentve."
+fi
+chmod 600 .env
 
 mkdir -p data/recordings
 chown 10001:10001 data/recordings
@@ -64,12 +84,16 @@ docker compose up -d --build --remove-orphans
 say "Várakozás a szerver indulására"
 for _ in $(seq 1 90); do
   if docker compose logs app 2>/dev/null | grep -q "http listening"; then
-    domain=$(grep '^DOMAIN=' .env | cut -d= -f2)
+    domain=$(getvar DOMAIN)
     docker compose ps
     say "Kész! Nyisd meg: https://$domain"
-    echo "Belépés: a megadott felhasználónév és jelszó."
+    echo "Belépés Discorddal. Aki elsőként lép be, az lesz a csapattulajdonos."
     echo "Élő napló: docker compose logs -f app"
     exit 0
+  fi
+  if [ "$(docker inspect -f '{{.State.Status}}' telelab-app 2>/dev/null)" = "restarting" ]; then
+    docker compose logs --tail 30 app
+    die "a szerver újraindul, valami hiányzik a beállításokból (lásd fent)"
   fi
   sleep 2
 done

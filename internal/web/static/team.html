@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Csapat · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <nav class="nav" aria-label="Fő menü">
+    <a href="/">Élő</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  </nav>
+  <span class="session"></span>
+  <div class="me" id="me"></div>
+</header>
+<main class="page">
+  <h1>Csapat</h1>
+  <p class="lead" id="lead">A csapat tagjai, szerepkörei és telemetria-portjai.</p>
+  <p class="notice" id="notice" role="status"></p>
+  <section class="panel team">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tag</th><th>Szerepkör</th><th>Port</th><th>Utolsó belépés</th><th></th></tr></thead>
+        <tbody id="members"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script type="module">
+  import { initNav, escapeHtml, avatarUrl, ROLE_HU } from "./nav.js";
+  const me = await initNav();
+  const owner = me?.role === "owner";
+  let ports = [];
+  if (owner) document.getElementById("lead").textContent =
+    "Tulajdonosként itt hagyod jóvá az új tagokat, állítod a szerepköröket és osztod ki a portokat. A változás azonnal érvényes.";
+
+  const notice = (t) => { const n = document.getElementById("notice"); n.textContent = t; if (t) setTimeout(() => n.textContent === t && (n.textContent = ""), 5000); };
+
+  async function load() {
+    const [users, feeds] = await Promise.all([fetch("/api/team").then((r) => r.json()), fetch("/api/feeds").then((r) => r.json())]);
+    ports = feeds.map((f) => f.port).sort((a, b) => a - b);
+    document.getElementById("members").innerHTML = users.map((u) => row(u, users)).join("");
+  }
+
+  function row(u, users) {
+    const img = avatarUrl(u);
+    const name = u.displayName || u.username;
+    const who = `<div class="who">${img ? `<img src="${img}" alt="">` : "<i></i>"}<div>${escapeHtml(name)}<small>@${escapeHtml(u.username)}</small></div></div>`;
+    const last = new Date(u.lastLogin).toLocaleString("hu-HU", { dateStyle: "short", timeStyle: "short" });
+    if (!owner) return `<tr><td>${who}</td><td>${ROLE_HU[u.role]}</td><td>${u.udpPort ?? "–"}</td><td>${last}</td><td></td></tr>`;
+    const taken = new Set(users.filter((x) => x.id !== u.id && x.udpPort != null).map((x) => x.udpPort));
+    const roleSel = `<select data-id="${u.id}" data-field="role" aria-label="Szerepkör: ${escapeHtml(name)}">${
+      Object.entries(ROLE_HU).map(([k, v]) => `<option value="${k}" ${k === u.role ? "selected" : ""}>${v}</option>`).join("")}</select>`;
+    const portSel = `<select data-id="${u.id}" data-field="udpPort" aria-label="Port: ${escapeHtml(name)}"><option value="">nincs</option>${
+      ports.map((p) => `<option value="${p}" ${p === u.udpPort ? "selected" : ""} ${taken.has(p) ? "disabled" : ""}>${p}</option>`).join("")}</select>`;
+    const del = u.id === me.id ? "" : `<button class="btn" data-del="${u.id}">Eltávolítás</button>`;
+    return `<tr data-row="${u.id}"><td>${who}</td><td>${roleSel}</td><td>${portSel}</td><td>${last}</td><td>${del}</td></tr>`;
+  }
+
+  document.getElementById("members").addEventListener("change", async (e) => {
+    const sel = e.target.closest("select");
+    if (!sel) return;
+    const tr = sel.closest("tr");
+    const role = tr.querySelector('[data-field="role"]').value;
+    const p = tr.querySelector('[data-field="udpPort"]').value;
+    const res = await fetch(`/api/team/${sel.dataset.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role, udpPort: p === "" ? null : Number(p) }),
+    });
+    notice(res.ok ? "Mentve." : `Nem sikerült: ${(await res.text()).trim()}`);
+    load();
+  });
+
+  document.getElementById("members").addEventListener("click", async (e) => {
+    const id = e.target.dataset?.del;
+    if (!id) return;
+    const name = e.target.closest("tr").querySelector(".who div").firstChild.textContent;
+    if (!confirm(`Biztosan eltávolítod: ${name}? Újra beléphet, ha tagja a csapat Discord-szerverének.`)) return;
+    const res = await fetch(`/api/team/${id}`, { method: "DELETE" });
+    notice(res.ok ? `${name} eltávolítva.` : `Nem sikerült: ${(await res.text()).trim()}`);
+    load();
+  });
+
+  load();
+</script>
+</body>
+</html>

@@ -29,6 +29,10 @@ services:
       TELELAB_RECORD_DIR: /data/recordings
       TELELAB_RECORD_DAYS: ${RECORD_DAYS:-7}
       TELELAB_PUBLIC_IP: ${PUBLIC_IP:-}
+      TELELAB_BASE_URL: https://${DOMAIN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set DISCORD_CLIENT_SECRET in .env}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
     ports:
       - "31600-31619:31600-31619/udp"
     volumes:
@@ -42,8 +46,6 @@ services:
       - app
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?set BASIC_AUTH_USER in .env}
-      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?set BASIC_AUTH_HASH in .env}
     ports:
       - "80:80"
       - "443:443"

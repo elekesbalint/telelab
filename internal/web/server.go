@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"log"
 	"net/http"
@@ -16,7 +17,9 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/elekesbalint/telelab/internal/auth"
 	"github.com/elekesbalint/telelab/internal/feed"
+	"github.com/elekesbalint/telelab/internal/store"
 )
 
 //go:embed static
@@ -25,8 +28,10 @@ var staticFiles embed.FS
 // Server holds the feeds and the (optional) database.
 type Server struct {
 	Feeds    map[int]*feed.Feed
-	DB       *sql.DB // nil when running without a database
-	PublicIP string  // shown to drivers as the UDP target address
+	DB       *sql.DB      // nil when running without a database
+	Store    *store.Store // nil when running without a database
+	Auth     *auth.Auth   // nil = no login required (local development only)
+	PublicIP string       // shown to drivers as the UDP target address
 }
 
 // Handler returns the HTTP handler.
@@ -40,10 +45,18 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/feeds/{port}/live", s.liveSocket)
 	mux.HandleFunc("GET /api/sessions", s.listSessions)
 	mux.HandleFunc("GET /api/sessions/{id}/laps", s.sessionLaps)
+	mux.HandleFunc("GET /api/me", s.me)
+	mux.HandleFunc("GET /api/team", s.listTeam)
+	mux.HandleFunc("PATCH /api/team/{id}", auth.RequireOwner(s.updateMember))
+	mux.HandleFunc("DELETE /api/team/{id}", auth.RequireOwner(s.deleteMember))
 
 	static, _ := fs.Sub(staticFiles, "static")
 	mux.Handle("GET /", http.FileServerFS(static))
-	return mux
+	if s.Auth == nil {
+		return mux
+	}
+	s.Auth.Register(mux)
+	return s.Auth.Middleware(mux)
 }
 
 type feedInfo struct {
@@ -54,12 +67,26 @@ type feedInfo struct {
 	Track      string `json:"track,omitempty"`
 	Type       string `json:"type,omitempty"`
 	Player     string `json:"player,omitempty"`
+	Owner      string `json:"owner,omitempty"` // team member the port is assigned to
+}
+
+func (s *Server) portNames(ctx context.Context) map[int]string {
+	if s.Store == nil {
+		return map[int]string{}
+	}
+	m, err := s.Store.PortNames(ctx)
+	if err != nil {
+		log.Printf("api: port names: %v", err)
+		return map[int]string{}
+	}
+	return m
 }
 
 func (s *Server) listFeeds(w http.ResponseWriter, r *http.Request) {
+	names := s.portNames(r.Context())
 	out := []feedInfo{}
 	for port, f := range s.Feeds {
-		fi := feedInfo{Port: port, AgeMs: -1}
+		fi := feedInfo{Port: port, AgeMs: -1, Owner: names[port]}
 		if snap := f.State.Snapshot(); snap != nil {
 			fi.AgeMs, fi.SessionUID = snap.AgeMs, snap.SessionUID
 			fi.Active = snap.AgeMs < 30_000
@@ -199,6 +226,76 @@ func (s *Server) sessionLaps(w http.ResponseWriter, r *http.Request) {
 		out = append(out, x)
 	}
 	writeJSON(w, out)
+}
+
+func (s *Server) me(w http.ResponseWriter, r *http.Request) {
+	u, ok := auth.UserFrom(r.Context())
+	if !ok {
+		writeJSON(w, map[string]any{"role": "owner", "displayName": "Fejlesztő", "devMode": true, "publicIp": s.PublicIP})
+		return
+	}
+	writeJSON(w, map[string]any{"id": u.ID, "displayName": u.Name(), "username": u.Username, "avatar": u.Avatar,
+		"discordId": u.DiscordID, "role": u.Role, "udpPort": u.UDPPort, "publicIp": s.PublicIP})
+}
+
+func (s *Server) listTeam(w http.ResponseWriter, r *http.Request) {
+	if s.Store == nil {
+		writeJSON(w, []any{})
+		return
+	}
+	users, err := s.Store.ListUsers(r.Context())
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	writeJSON(w, users)
+}
+
+func (s *Server) updateMember(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	var body struct {
+		Role    string `json:"role"`
+		UDPPort *int   `json:"udpPort"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || !store.ValidRole(body.Role) {
+		http.Error(w, "hibás kérés", http.StatusBadRequest)
+		return
+	}
+	if body.UDPPort != nil {
+		if _, ok := s.Feeds[*body.UDPPort]; !ok {
+			http.Error(w, "ez a port nincs a szerver tartományában", http.StatusBadRequest)
+			return
+		}
+	}
+	if me, ok := auth.UserFrom(r.Context()); ok && me.ID == id && body.Role != store.RoleOwner {
+		if n, err := s.Store.CountOwners(r.Context()); err == nil && n <= 1 {
+			http.Error(w, "te vagy az egyetlen tulajdonos, a saját szerepköröd nem módosíthatod", http.StatusBadRequest)
+			return
+		}
+	}
+	u, err := s.Store.UpdateUser(r.Context(), id, body.Role, body.UDPPort)
+	if errors.Is(err, store.ErrPortTaken) {
+		http.Error(w, "ez a port már másé", http.StatusConflict)
+		return
+	}
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	writeJSON(w, u)
+}
+
+func (s *Server) deleteMember(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if me, ok := auth.UserFrom(r.Context()); ok && me.ID == id {
+		http.Error(w, "saját magadat nem törölheted", http.StatusBadRequest)
+		return
+	}
+	if err := s.Store.DeleteUser(r.Context(), id); err != nil {
+		httpError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

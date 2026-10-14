@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belépés · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="gate">
+<main class="gate-box">
+  <p class="brand">Tele<span>Lab</span></p>
+  <h1>Csapat-telemetria F1 26-hoz</h1>
+  <p class="lead">Lépj be a Discord-fiókoddal. Ha tagja vagy a csapat Discord-szerverének, azonnal bejutsz és kapsz egy saját telemetria-portot.</p>
+  <a class="discord" href="/auth/discord">Belépés Discorddal</a>
+  <p class="error" id="error" hidden></p>
+  <p class="credit">TeleLab by Bálint Elekes</p>
+</main>
+<script>
+  const reasons = {
+    denied: "A belépést a Discordon megszakítottad. Próbáld újra, és engedélyezd a hozzáférést.",
+    state: "A belépés lejárt vagy egy másik ablakban indult. Kattints újra a gombra.",
+    discord: "A Discord nem válaszolt rendesen. Próbáld újra pár másodperc múlva.",
+    db: "A szerver nem tudta elmenteni a belépést. Szólj a csapattulajdonosnak.",
+    code: "Hiányzó belépési kód a Discordtól. Kattints újra a gombra.",
+  };
+  const err = new URLSearchParams(location.search).get("error");
+  if (err) { const el = document.getElementById("error"); el.textContent = reasons[err] || "Sikertelen belépés, próbáld újra."; el.hidden = false; }
+</script>
+</body>
+</html>

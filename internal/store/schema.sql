@@ -55,3 +55,25 @@ CREATE TABLE IF NOT EXISTS samples (
     pos_z        REAL
 );
 CREATE INDEX IF NOT EXISTS samples_session_lap ON samples (session_id, lap_num, time);
+
+-- Team members, signed in with Discord.
+CREATE TABLE IF NOT EXISTS users (
+    id           BIGSERIAL PRIMARY KEY,
+    discord_id   TEXT        NOT NULL UNIQUE,
+    username     TEXT        NOT NULL DEFAULT '',
+    display_name TEXT        NOT NULL DEFAULT '',
+    avatar       TEXT        NOT NULL DEFAULT '',
+    role         TEXT        NOT NULL DEFAULT 'pending', -- owner | engineer | driver | pending
+    udp_port     INT         UNIQUE,                     -- the driver's telemetry port
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_login   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Browser login sessions (cookie holds the token, we store its SHA-256).
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash TEXT        PRIMARY KEY,
+    user_id    BIGINT      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS auth_sessions_expires ON auth_sessions (expires_at);

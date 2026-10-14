@@ -1,5 +1,6 @@
 // TeleLab live driver view. Connects to /api/feeds/{port}/live and renders
 // each snapshot (sent 10x per second).
+import { initNav } from "./nav.js";
 
 const $ = (id) => document.getElementById(id);
 const COMPOUND = { Soft: "var(--soft)", Medium: "var(--medium)", Hard: "var(--hard)", Inter: "var(--inter)", Wet: "var(--wet)" };
@@ -15,7 +16,14 @@ let trace = [];
 let sectorBests = {}; // carIdx -> {s1, s2}
 let lastUid = null;
 let publicIp = null;
-fetch("/api/config").then((r) => r.json()).then((c) => { publicIp = c.publicIp || null; $("empty-ip").textContent = publicIp || location.hostname; }).catch(() => {});
+let myPort = null;
+initNav().then((me) => {
+  if (!me) return;
+  publicIp = me.publicIp || null;
+  myPort = me.udpPort ?? null;
+  $("empty-ip").textContent = publicIp || location.hostname;
+  loadFeeds();
+});
 
 const fmtLap = (ms) => {
   if (!ms) return "–";
@@ -32,14 +40,15 @@ async function loadFeeds() {
     feeds = await (await fetch("/api/feeds")).json();
   } catch { return; }
   const sel = $("feed");
-  const saved = Number(localStorage.getItem("telelab.port")) || null;
-  const prev = currentPort ?? saved;
+  let saved = null;
+  try { saved = Number(localStorage.getItem("telelab.port")) || null; } catch {}
+  const prev = currentPort ?? saved ?? myPort;
   sel.innerHTML = "";
   for (const f of feeds) {
     const o = document.createElement("option");
     o.value = f.port;
-    const who = f.player || "nincs adat";
-    o.textContent = f.active ? `${who}, ${f.track || "?"} (port ${f.port})` : `Port ${f.port}${f.player ? `, utoljára ${f.player}` : ""}`;
+    const who = f.owner || f.player || "ismeretlen";
+    o.textContent = f.active ? `${who}, ${f.track || "?"} (élő)` : `${f.owner || "szabad port"} (${f.port})`;
     sel.append(o);
   }
   const active = feeds.find((f) => f.active);
@@ -260,5 +269,4 @@ function drawTrace() {
 }
 requestAnimationFrame(drawTrace);
 
-loadFeeds();
 setInterval(loadFeeds, 5000);

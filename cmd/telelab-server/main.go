@@ -10,6 +10,10 @@
 //	TELELAB_RECORD_DIR    raw recordings directory (empty = no recording)
 //	TELELAB_RECORD_DAYS   delete recordings older than this many days (default 7)
 //	TELELAB_PUBLIC_IP     server IP shown in the connection instructions
+//	TELELAB_BASE_URL      public URL, e.g. https://telelab.balintelekes.hu
+//	DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET   Discord application for login
+//	DISCORD_GUILD_ID      team Discord server; its members are approved automatically
+//	TELELAB_AUTH=off      disable login (local development only)
 package main
 
 import (
@@ -27,6 +31,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/elekesbalint/telelab/internal/auth"
 	"github.com/elekesbalint/telelab/internal/feed"
 	"github.com/elekesbalint/telelab/internal/store"
 	"github.com/elekesbalint/telelab/internal/web"
@@ -67,7 +72,7 @@ func run(ctx context.Context) error {
 			return err
 		}
 		defer st.Close()
-		srv.DB = st.DB()
+		srv.DB, srv.Store = st.DB(), st
 		writer = feed.NewWriter(st)
 		bg.Add(1)
 		go func() { defer bg.Done(); writer.Run(writerCtx) }()
@@ -76,6 +81,20 @@ func run(ctx context.Context) error {
 		log.Printf("DATABASE_URL not set: running without a database")
 	}
 	go feed.CleanRecordings(ctx, recDir, time.Duration(recDays)*24*time.Hour)
+
+	if os.Getenv("TELELAB_AUTH") == "off" {
+		log.Printf("WARNING: TELELAB_AUTH=off, the web UI is open to everyone")
+	} else {
+		cfg := auth.Config{
+			ClientID: os.Getenv("DISCORD_CLIENT_ID"), ClientSecret: os.Getenv("DISCORD_CLIENT_SECRET"),
+			GuildID: os.Getenv("DISCORD_GUILD_ID"), BaseURL: os.Getenv("TELELAB_BASE_URL"), Ports: ports,
+		}
+		if cfg.ClientID == "" || cfg.ClientSecret == "" || cfg.BaseURL == "" || srv.Store == nil {
+			return errors.New("login is not configured: set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, TELELAB_BASE_URL and DATABASE_URL (or TELELAB_AUTH=off for local development)")
+		}
+		srv.Auth = auth.New(cfg, srv.Store)
+		log.Printf("Discord login enabled (team server %q)", cfg.GuildID)
+	}
 
 	var readers sync.WaitGroup
 	for _, port := range ports {

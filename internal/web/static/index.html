@@ -12,18 +12,22 @@
 <body>
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
+  <nav class="nav" aria-label="Fő menü">
+    <a href="/">Élő</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  </nav>
   <label class="feed-pick">
     <span class="sr">Pilóta</span>
     <select id="feed"></select>
   </label>
   <p class="session" id="session">Nincs kiválasztott feed</p>
   <p class="conn" id="conn" data-state="off">Nincs kapcsolat</p>
+  <div class="me" id="me"></div>
 </header>
 
 <main id="app">
   <section class="empty" id="empty" hidden>
     <h1>Még nem jön adat ezen a porton</h1>
-    <p>A játékban a Telemetry Settings alatt add meg: UDP IP-cím <b id="empty-ip"></b>, port <b id="empty-port"></b>, UDP Format 2026, Send Rate 60 Hz. Amint kimész a pályára, itt megjelenik minden.</p>
+    <p>A játékban a Telemetry Settings alatt add meg: UDP IP-cím <b id="empty-ip"></b>, port <b id="empty-port"></b>, UDP Format 2026, Send Rate 60 Hz. Amint kimész a pályára, itt megjelenik minden. A részletes beállítást a <a href="/connect.html">Csatlakozás</a> oldalon találod.</p>
   </section>
 
   <div id="live" hidden>
