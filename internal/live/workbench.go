@@ -2,6 +2,7 @@ package live
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -140,6 +141,9 @@ type WBDetail struct {
 	LapDist    float32          `json:"lapDistance"`
 	Lap        uint8            `json:"lap"`
 	Damage     map[string]uint8 `json:"damage"`
+	GripMu     [4]float32       `json:"gripMu"`
+	WheelSlip  [4]float32       `json:"wheelSlip"`
+	Surface    [4]uint8         `json:"surface"`
 }
 
 // WBLap is the player's lap panel: sectors and delta to the previous lap.
@@ -417,6 +421,22 @@ func (s *State) detail(i int) *WBDetail {
 		d.DRS, d.EngineTemp = t.DRS, t.EngineTemperature
 		d.TyreSurf, d.TyreInner, d.BrakeTemp = t.TyresSurfaceTemperature, t.TyresInnerTemperature, t.BrakesTemperature
 		d.TyrePress = t.TyresPressure
+		d.Surface = t.SurfaceType
+	}
+	if s.MotionEx != nil {
+		ex := s.MotionEx
+		for k := 0; k < 4; k++ {
+			v := ex.WheelVertForce[k]
+			if v < 0 {
+				v = -v
+			}
+			if v < 1 {
+				v = 1
+			}
+			lat, lon := ex.WheelLatForce[k], ex.WheelLongForce[k]
+			d.GripMu[k] = float32(math.Sqrt(float64(lat*lat+lon*lon)) / float64(v))
+			d.WheelSlip[k] = ex.WheelSlipRatio[k]
+		}
 	}
 	if s.Status != nil {
 		st := s.Status.CarStatusData[i]

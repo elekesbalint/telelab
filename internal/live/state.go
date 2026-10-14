@@ -28,6 +28,7 @@ type State struct {
 	Status       *f1udp.PacketCarStatusData
 	Damage       *f1udp.PacketCarDamageData
 	Motion       *f1udp.PacketMotionData
+	MotionEx     *f1udp.PacketMotionExData // player car only
 	History      [f1udp.MaxCars]*f1udp.PacketSessionHistoryData
 	Setups       *f1udp.PacketCarSetupData
 	TyreSets     *f1udp.PacketTyreSetsData // player's car only
@@ -70,7 +71,7 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.SessionUID = h.SessionUID
 		s.Session, s.Participants, s.Lap = nil, nil, nil
 		s.Telemetry, s.Telemetry2, s.Status, s.Damage = nil, nil, nil, nil
-		s.Motion, s.History = nil, [f1udp.MaxCars]*f1udp.PacketSessionHistoryData{}
+		s.Motion, s.MotionEx, s.History = nil, nil, [f1udp.MaxCars]*f1udp.PacketSessionHistoryData{}
 		s.Setups, s.TyreSets = nil, nil
 		s.minis.reset()
 		s.LastEvents, s.Recent = nil, nil
@@ -100,6 +101,8 @@ func (s *State) Apply(h f1udp.Header, p any) {
 	case *f1udp.PacketMotionData:
 		s.Motion = v
 		s.learnOutline()
+	case *f1udp.PacketMotionExData:
+		s.MotionEx = v
 	case *f1udp.PacketCarSetupData:
 		s.Setups = v
 	case *f1udp.PacketTyreSetsData:

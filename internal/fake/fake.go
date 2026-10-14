@@ -76,11 +76,16 @@ func Frame(frame uint32, t float32) [][]byte {
 	tel.CarTelemetryData[0] = f1udp.CarTelemetryData{Speed: uint16(speed), Throttle: float32(thr), Brake: float32(brk),
 		Steer: float32(-math.Sin(6*math.Pi*f) * 0.4), Gear: int8(2 + speed/50), EngineRPM: uint16(8000 + 30*speed*thr/1.0),
 		EngineTemperature: 108, TyresSurfaceTemperature: [4]uint8{96, 97, 79, 108}, TyresInnerTemperature: [4]uint8{101, 102, 99, 100},
-		BrakesTemperature: [4]uint16{540, 545, 610, 615}}
+		BrakesTemperature: [4]uint16{540, 545, 610, 615}, TyresPressure: [4]float32{21.9, 21.9, 23.3, 23.3}}
 	t2 := f1udp.PacketCarTelemetry2Data{Header: h(f1udp.IDCarTelemetry2)}
 	t2.CarTelemetry2Data[0] = f1udp.CarTelemetry2Data{ActiveAeroMode: uint8(map[bool]int{true: 1}[corner > 0.5]), OvertakeAvailable: 1, Regulations2026: 1}
 	motion := f1udp.PacketMotionData{Header: h(f1udp.IDMotion)}
 	motion.CarMotionData[0].WorldPositionX, motion.CarMotionData[0].WorldPositionZ = float32(px), float32(pz)
+	mex := f1udp.PacketMotionExData{Header: h(f1udp.IDMotionEx),
+		WheelVertForce:  [4]float32{4200, 4100, 3800, 3700},
+		WheelLatForce:   [4]float32{2800, 2500, 2100, 1600},
+		WheelLongForce:  [4]float32{900, 800, 500, 400},
+		WheelSlipRatio:  [4]float32{0.012, 0.01, 0.008, 0.009}}
 
 	// session history for one car per frame, like the game does
 	car := int(frame % uint32(len(names)))
@@ -118,7 +123,7 @@ func Frame(frame uint32, t float32) [][]byte {
 		EngineBraking: 50, RearLeftTyrePressure: 21.9, RearRightTyrePressure: 21.9, FrontLeftTyrePressure: 23.3, FrontRightTyrePressure: 23.3, FuelLoad: 2}
 
 	var out [][]byte
-	for _, p := range []any{&ses, &par, &lapPkt, &tel, &st, &dmg, &t2, &hist, &motion, &sets, &setup} {
+	for _, p := range []any{&ses, &par, &lapPkt, &tel, &st, &dmg, &t2, &hist, &motion, &mex, &sets, &setup} {
 		var b bytes.Buffer
 		_ = binary.Write(&b, binary.LittleEndian, p)
 		out = append(out, b.Bytes())
