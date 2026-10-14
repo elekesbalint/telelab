@@ -17,6 +17,7 @@ TeleLab ("TeleLab by Bálint Elekes") is a private telemetry platform for one F1
 - Bálint, the owner, writes in **Hungarian**. Reply to him in Hungarian.
 - The **UI is English**, and so are code, comments, identifiers and commit messages.
 - He is not a Go specialist. When something has to be done on the VPS, give him exact, copy-pasteable commands and say where to run them.
+- After finishing a task, **commit and push to `origin/main` without asking**. Then give him the VPS deploy one-liner.
 - Never ask for, print or commit secrets: Discord client secret, `.env`, passwords. He types secrets himself, on the VPS only.
 - Never commit the EA spec files. They live in `spec/`, which is git-ignored.
 
