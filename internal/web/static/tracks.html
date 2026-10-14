@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracks · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="trk">
+  <div class="trk-head">
+    <div>
+      <h1>Tracks</h1>
+      <p class="lead">Per-track compound pace, stints and historical races — from every session in this workspace.</p>
+    </div>
+    <div class="trk-tools">
+      <label class="ses-search"><span class="sr">Search tracks</span>
+        <input type="search" id="q" placeholder="Search tracks…" autocomplete="off">
+      </label>
+      <select id="sort">
+        <option value="az">A–Z</option>
+        <option value="laps">Most laps</option>
+        <option value="recent">Last used</option>
+        <option value="best">Best lap</option>
+      </select>
+      <button type="button" class="btn" id="refresh">Refresh</button>
+    </div>
+  </div>
+  <div class="trk-grid" id="list"></div>
+</main>
+</div>
+<script type="module" src="tracks.js"></script>
+</body>
+</html>

@@ -19,6 +19,9 @@ type job struct {
 	meta    *store.SessionMeta
 	laps    []store.Lap
 	samples []store.Sample
+	setup   []byte
+	field   []byte
+	class   []byte
 }
 
 // Writer is the single background goroutine that talks to the database.
@@ -92,6 +95,21 @@ func (w *Writer) process(j job) {
 	if len(j.samples) > 0 {
 		if err := w.st.InsertSamples(ctx, id, j.samples); err != nil {
 			log.Printf("writer: samples: %v", err)
+		}
+	}
+	if len(j.setup) > 0 {
+		if err := w.st.SaveSetup(ctx, id, j.setup); err != nil {
+			log.Printf("writer: setup: %v", err)
+		}
+	}
+	if len(j.field) > 0 {
+		if err := w.st.SaveField(ctx, id, j.field); err != nil {
+			log.Printf("writer: field: %v", err)
+		}
+	}
+	if len(j.class) > 0 {
+		if err := w.st.SaveClassification(ctx, id, j.class); err != nil {
+			log.Printf("writer: classification: %v", err)
 		}
 	}
 }

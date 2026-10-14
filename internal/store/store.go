@@ -118,6 +118,34 @@ func (s *Store) Touch(ctx context.Context, id int64) error {
 	return err
 }
 
+func saveSessionJSON(ctx context.Context, db *sql.DB, sessionID int64, col string, raw []byte) error {
+	if sessionID == 0 || len(raw) == 0 {
+		return nil
+	}
+	switch col {
+	case "setup", "field", "classification":
+	default:
+		return fmt.Errorf("unknown session json column %q", col)
+	}
+	_, err := db.ExecContext(ctx, `UPDATE sessions SET `+col+` = $2 WHERE id = $1`, sessionID, raw)
+	return err
+}
+
+// SaveSetup stores the player's car setup JSON for a session (async, UDP-safe).
+func (s *Store) SaveSetup(ctx context.Context, sessionID int64, raw []byte) error {
+	return saveSessionJSON(ctx, s.db, sessionID, "setup", raw)
+}
+
+// SaveField stores the participant list (name, team) for a session.
+func (s *Store) SaveField(ctx context.Context, sessionID int64, raw []byte) error {
+	return saveSessionJSON(ctx, s.db, sessionID, "field", raw)
+}
+
+// SaveClassification stores the final classification packet for a session.
+func (s *Store) SaveClassification(ctx context.Context, sessionID int64, raw []byte) error {
+	return saveSessionJSON(ctx, s.db, sessionID, "classification", raw)
+}
+
 // Lap is a completed lap.
 type Lap struct {
 	CarIdx     int
@@ -129,6 +157,7 @@ type Lap struct {
 	Valid      bool
 	TyreVisual int
 	TyreActual int
+	TeamID     int
 }
 
 // UpsertLaps stores completed laps (idempotent).
@@ -139,18 +168,18 @@ func (s *Store) UpsertLaps(ctx context.Context, sessionID int64, laps []Lap) err
 	}
 	defer tx.Rollback()
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO laps (session_id, car_idx, lap_num, driver_name, is_player, lap_time_ms, s1_ms, s2_ms, s3_ms, valid, tyre_visual, tyre_actual)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+		INSERT INTO laps (session_id, car_idx, lap_num, driver_name, is_player, lap_time_ms, s1_ms, s2_ms, s3_ms, valid, tyre_visual, tyre_actual, team_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		ON CONFLICT (session_id, car_idx, lap_num) DO UPDATE SET
 			driver_name = EXCLUDED.driver_name, is_player = EXCLUDED.is_player, lap_time_ms = EXCLUDED.lap_time_ms,
 			s1_ms = EXCLUDED.s1_ms, s2_ms = EXCLUDED.s2_ms, s3_ms = EXCLUDED.s3_ms, valid = EXCLUDED.valid,
-			tyre_visual = EXCLUDED.tyre_visual, tyre_actual = EXCLUDED.tyre_actual`)
+			tyre_visual = EXCLUDED.tyre_visual, tyre_actual = EXCLUDED.tyre_actual, team_id = EXCLUDED.team_id`)
 	if err != nil {
 		return err
 	}
 	for _, l := range laps {
 		if _, err := stmt.ExecContext(ctx, sessionID, l.CarIdx, l.LapNum, l.DriverName, l.IsPlayer, l.LapTimeMs,
-			l.S1, l.S2, l.S3, l.Valid, l.TyreVisual, l.TyreActual); err != nil {
+			l.S1, l.S2, l.S3, l.Valid, l.TyreVisual, l.TyreActual, l.TeamID); err != nil {
 			return err
 		}
 	}

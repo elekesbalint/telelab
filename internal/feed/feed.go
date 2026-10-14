@@ -4,6 +4,7 @@
 package feed
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -30,7 +31,10 @@ type Feed struct {
 	rec      *record.Writer
 	uid      uint64
 	key      sessionKey
-	lastMeta time.Time
+	lastMeta  time.Time
+	lastSetup time.Time
+	lastField time.Time
+	sentClass bool
 
 	session      *f1udp.PacketSessionData
 	participants *f1udp.PacketParticipantsData
@@ -81,6 +85,10 @@ func (f *Feed) Handle(now time.Time, raw []byte) {
 		if first {
 			f.sendMeta(h)
 		}
+		if first || now.Sub(f.lastField) > 30*time.Second {
+			f.lastField = now
+			f.sendField()
+		}
 	case *f1udp.PacketLapData:
 		f.lap = v
 	case *f1udp.PacketCarStatusData:
@@ -91,6 +99,10 @@ func (f *Feed) Handle(now time.Time, raw []byte) {
 		f.collectLaps(h, v)
 	case *f1udp.PacketCarTelemetryData:
 		f.collectSample(now, h, v)
+	case *f1udp.PacketCarSetupData:
+		f.sendSetup(now, h, v)
+	case *f1udp.PacketFinalClassificationData:
+		f.sendClass(v)
 	}
 	if len(f.samples) > 0 && now.Sub(f.lastSamples) > time.Second {
 		f.flushSamples()
@@ -104,7 +116,8 @@ func (f *Feed) newSession(h f1udp.Header) {
 	f.key = sessionKey{uid: strconv.FormatUint(h.SessionUID, 10), port: f.Port}
 	f.session, f.participants, f.lap, f.status, f.motion = nil, nil, nil, nil, nil
 	f.sentLaps = map[[2]int]uint32{}
-	f.lastMeta = time.Time{}
+	f.lastMeta, f.lastSetup, f.lastField = time.Time{}, time.Time{}, time.Time{}
+	f.sentClass = false
 
 	if f.recDir == "" {
 		return
@@ -159,6 +172,79 @@ func (f *Feed) name(i int) string {
 	return f.participants.Participants[i].NameString()
 }
 
+func (f *Feed) teamID(i int) int {
+	if f.participants == nil || i < 0 || i >= f1udp.MaxCars {
+		return 0
+	}
+	return int(f.participants.Participants[i].TeamID)
+}
+
+func (f *Feed) sendField() {
+	if f.writer == nil || f.participants == nil {
+		return
+	}
+	n := int(f.participants.NumActiveCars)
+	if n <= 0 || n > f1udp.MaxCars {
+		n = f1udp.MaxCars
+	}
+	cars := make([]map[string]any, 0, n)
+	for i := 0; i < n; i++ {
+		p := f.participants.Participants[i]
+		name := p.NameString()
+		if name == "" {
+			continue
+		}
+		cars = append(cars, map[string]any{
+			"idx": i, "name": name, "teamId": int(p.TeamID),
+			"nat": int(p.Nationality), "ai": p.AIControlled == 1,
+		})
+	}
+	if len(cars) == 0 {
+		return
+	}
+	b, err := json.Marshal(cars)
+	if err != nil {
+		return
+	}
+	f.writer.enqueue(job{key: f.key, field: b})
+}
+
+func (f *Feed) sendClass(v *f1udp.PacketFinalClassificationData) {
+	if f.writer == nil || f.sentClass || v == nil {
+		return
+	}
+	n := int(v.NumCars)
+	if n <= 0 || n > f1udp.MaxCars {
+		n = f1udp.MaxCars
+	}
+	cars := make([]map[string]any, 0, n)
+	for i := 0; i < n; i++ {
+		c := v.ClassificationData[i]
+		if c.Position == 0 && c.ResultStatus < 2 {
+			continue
+		}
+		tyres := make([]int, 0, int(c.NumTyreStints))
+		for k := 0; k < int(c.NumTyreStints) && k < f1udp.MaxTyreStints; k++ {
+			if vis := int(c.TyreStintsVisual[k]); vis != 0 {
+				tyres = append(tyres, vis)
+			}
+		}
+		cars = append(cars, map[string]any{
+			"idx": i, "pos": int(c.Position), "laps": int(c.NumLaps),
+			"grid": int(c.GridPosition), "stops": int(c.NumPitStops),
+			"status": int(c.ResultStatus), "bestLapMs": int(c.BestLapTimeInMS),
+			"raceTime": c.TotalRaceTime, "tyres": tyres,
+		})
+	}
+	b, err := json.Marshal(map[string]any{"numCars": n, "cars": cars})
+	if err != nil {
+		return
+	}
+	f.sentClass = true
+	f.writer.enqueue(job{key: f.key, class: b})
+	f.sendField()
+}
+
 func (f *Feed) sendMeta(h f1udp.Header) {
 	if f.writer == nil {
 		return
@@ -173,6 +259,33 @@ func (f *Feed) sendMeta(h f1udp.Header) {
 		m.TeamID = int(p.Participants[h.PlayerCarIndex].TeamID)
 	}
 	f.writer.enqueue(job{key: f.key, meta: m})
+}
+
+func (f *Feed) sendSetup(now time.Time, h f1udp.Header, v *f1udp.PacketCarSetupData) {
+	if f.writer == nil || now.Sub(f.lastSetup) < 15*time.Second {
+		return
+	}
+	i := int(h.PlayerCarIndex)
+	if i < 0 || i >= f1udp.MaxCars {
+		return
+	}
+	c := v.CarSetupData[i]
+	b, err := json.Marshal(map[string]any{
+		"frontWing": c.FrontWing, "rearWing": c.RearWing,
+		"onThrottle": c.OnThrottle, "offThrottle": c.OffThrottle, "engineBraking": c.EngineBraking,
+		"frontCamber": c.FrontCamber, "rearCamber": c.RearCamber, "frontToe": c.FrontToe, "rearToe": c.RearToe,
+		"frontSusp": c.FrontSuspension, "rearSusp": c.RearSuspension,
+		"frontARB": c.FrontAntiRollBar, "rearARB": c.RearAntiRollBar,
+		"frontHeight": c.FrontSuspensionHeight, "rearHeight": c.RearSuspensionHeight,
+		"brakePressure": c.BrakePressure, "brakeBias": c.BrakeBias,
+		"pressRL": c.RearLeftTyrePressure, "pressRR": c.RearRightTyrePressure,
+		"pressFL": c.FrontLeftTyrePressure, "pressFR": c.FrontRightTyrePressure,
+	})
+	if err != nil {
+		return
+	}
+	f.lastSetup = now
+	f.writer.enqueue(job{key: f.key, setup: b})
 }
 
 func (f *Feed) collectLaps(h f1udp.Header, v *f1udp.PacketSessionHistoryData) {
@@ -202,6 +315,7 @@ func (f *Feed) collectLaps(h f1udp.Header, v *f1udp.PacketSessionHistoryData) {
 			S2:        int(lh.Sector2TimeMinutesPart)*60000 + int(lh.Sector2TimeMSPart),
 			S3:        int(lh.Sector3TimeMinutesPart)*60000 + int(lh.Sector3TimeMSPart),
 			Valid:     lh.LapValidBitFlags&0x01 != 0,
+			TeamID:    f.teamID(car),
 		}
 		for k := 0; k < int(v.NumTyreStints) && k < f1udp.MaxTyreStints; k++ {
 			st := v.TyreStintsHistoryData[k]

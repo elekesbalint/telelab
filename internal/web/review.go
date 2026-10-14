@@ -2,6 +2,7 @@ package web
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"math"
 	"net/http"
@@ -24,9 +25,12 @@ type sessionRow struct {
 	Online      bool      `json:"online"`
 	StartedAt   time.Time `json:"startedAt"`
 	LastPacket  time.Time `json:"lastPacketAt"`
-	PlayerLaps  int       `json:"playerLaps"`
-	BestLapMs   *int      `json:"bestLapMs"`
-	HasSamples  bool      `json:"hasSamples"`
+	PlayerLaps     int             `json:"playerLaps"`
+	BestLapMs      *int            `json:"bestLapMs"`
+	HasSamples     bool            `json:"hasSamples"`
+	Setup          json.RawMessage `json:"setup,omitempty"`
+	Field          json.RawMessage `json:"field,omitempty"`
+	Classification json.RawMessage `json:"classification,omitempty"`
 }
 
 const sessionSelect = `
@@ -103,7 +107,69 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request) {
 		httpError(w, err)
 		return
 	}
+	var setup, field, class []byte
+	if err := s.DB.QueryRowContext(r.Context(), `SELECT setup, field, classification FROM sessions WHERE id = $1`, id).Scan(&setup, &field, &class); err == nil {
+		if len(setup) > 0 {
+			x.Setup = json.RawMessage(setup)
+		}
+		if len(field) > 0 {
+			x.Field = json.RawMessage(field)
+		}
+		if len(class) > 0 {
+			x.Classification = json.RawMessage(class)
+		}
+	}
 	writeJSON(w, x)
+}
+
+// sessionFuel: GET /api/sessions/{id}/fuel — player-car fuel and ERS at the start/end of each lap.
+func (s *Server) sessionFuel(w http.ResponseWriter, r *http.Request) {
+	if s.DB == nil {
+		writeJSON(w, []any{})
+		return
+	}
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	type point struct {
+		Lap   int     `json:"lap"`
+		Fuel0 float32 `json:"fuelStart"`
+		Fuel1 float32 `json:"fuelEnd"`
+		ERS0  float32 `json:"ersStart"`
+		ERS1  float32 `json:"ersEnd"`
+	}
+	rows, err := s.DB.QueryContext(r.Context(), `
+		WITH bounds AS (
+			SELECT lap_num, MIN(time) AS t0, MAX(time) AS t1
+			FROM samples WHERE session_id = $1 AND lap_num > 0
+			GROUP BY lap_num
+		)
+		SELECT b.lap_num, COALESCE(s0.fuel,0), COALESCE(s1.fuel,0), COALESCE(s0.ers_store,0), COALESCE(s1.ers_store,0)
+		FROM bounds b
+		LEFT JOIN LATERAL (
+			SELECT fuel, ers_store FROM samples
+			WHERE session_id = $1 AND lap_num = b.lap_num AND time = b.t0
+			ORDER BY time LIMIT 1
+		) s0 ON true
+		LEFT JOIN LATERAL (
+			SELECT fuel, ers_store FROM samples
+			WHERE session_id = $1 AND lap_num = b.lap_num AND time = b.t1
+			ORDER BY time LIMIT 1
+		) s1 ON true
+		ORDER BY b.lap_num`, id)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+	defer rows.Close()
+	out := []point{}
+	for rows.Next() {
+		var x point
+		if err := rows.Scan(&x.Lap, &x.Fuel0, &x.Fuel1, &x.ERS0, &x.ERS1); err != nil {
+			httpError(w, err)
+			return
+		}
+		out = append(out, x)
+	}
+	writeJSON(w, out)
 }
 
 // lapTrace is a lap's telemetry in columns, indexed by sample.

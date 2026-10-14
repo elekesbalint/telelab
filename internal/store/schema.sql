@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     last_packet_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (session_uid, port)
 );
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS setup JSONB;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS field JSONB;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS classification JSONB;
 CREATE INDEX IF NOT EXISTS sessions_started_at ON sessions (started_at DESC);
 
 -- One row per completed lap of every car seen in a session.
@@ -31,9 +34,11 @@ CREATE TABLE IF NOT EXISTS laps (
     valid       BOOLEAN  NOT NULL,
     tyre_visual SMALLINT,
     tyre_actual SMALLINT,
+    team_id     INT,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (session_id, car_idx, lap_num)
 );
+ALTER TABLE laps ADD COLUMN IF NOT EXISTS team_id INT;
 
 -- Player car telemetry at the game's send rate (up to 60 Hz).
 CREATE TABLE IF NOT EXISTS samples (

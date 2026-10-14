@@ -82,7 +82,8 @@ Elkészült fázisok:
 | **Live** (Driver View) | `index.html`, `app.js` | Egy kiválasztott pilóta élő adatai 10 Hz-en: sebesség, fokozat, fordulat, gáz és fék, kör és szektorok, deltaidők, gumik (felület és mag hőmérséklete, kopás, fék), ERS és üzemanyag, aero és overtake, állás tábla és versenyirányítás. Van rajta egy kis gáz/fék/sebesség grafikon is. |
 | **Workbench** | `workbench.html`, `workbench.js`, `panels.js`, `workbench.css` | Testreszabható pit wall: mozgatható és méretezhető panelek 12 oszlopos rácson. A nézetek mentve vannak és a csapat közösen használja őket. Van export/import, pilóta-átnevezés, teljes képernyő. Részletek: [12.3](#123-workbench). |
 | **Sessions** | `sessions.html` | A rögzített sessionök listája, pálya és pilóta szerint szűrhető. |
-| **Session** | `session.html` | Egy session körei: köridő-grafikon, a mezőny legjobb körei, a saját körök táblázata. Egy kör kiválasztva megnyílik a telemetriája, két kör kiválasztva összehasonlítható (mindkettő a Compare oldalon). |
+| **Tracks** | `tracks.html`, `track.html` | Pályák rácsnézete, pálya-részlet: referencia-stintek, compound pace, stint szimulátor, best-lap setupok. A Setup gomb a tárolt autósetupot nyitja. |
+| **Session review** | `session.html` | Race director (mezőny, boxkiállások), köridő-grafikon, körönkénti tábla. A Review gomb ide hoz a Tracks vagy Sessions oldalról. |
 | **Compare** | `compare.html`, `compare.js` | Egy kör telemetriája, vagy két kör táv szerint igazítva (`?a=<sessionId>:<kör>&b=<sessionId>:<kör>`, a két kör lehet két különböző sessionből is): sebesség, gáz, fék, fokozat, kormány, ERS és időkülönbség (B − A), valamint pályatérkép. |
 | **Connect** | `connect.html` | A belépett pilóta saját beállításai: szerver IP és saját port. Mellette a csapat portkiosztása. |
 | **Team** | `team.html` | Tagok listája. A tulajdonos itt állítja a szerepköröket és a portokat, és itt törölhet tagot. |
@@ -334,8 +335,8 @@ A séma a `internal/store/schema.sql` fájlban van. **Minden indításkor lefut,
 
 | Tábla | Tartalom | Kulcs |
 | --- | --- | --- |
-| `sessions` | Egy játék-session egy porton. Mezők: `session_uid` (szövegként), `port`, `player_name`, `team_id`, `track_id`, `session_type`, `formula`, `total_laps`, `online`, `started_at`, `last_packet_at`. | `id`, egyedi: `(session_uid, port)` |
-| `laps` | Minden autó minden befejezett köre: idő, S1–S3, érvényesség, gumi, `is_player`. | `(session_id, car_idx, lap_num)` |
+| `sessions` | Egy játék-session egy porton. Mezők: `session_uid` (szövegként), `port`, `player_name`, `team_id`, `track_id`, `session_type`, `formula`, `total_laps`, `online`, `started_at`, `last_packet_at`, plusz JSONB: `setup`, `field` (mezőny), `classification` (végeredmény). | `id`, egyedi: `(session_uid, port)` |
+| `laps` | Minden autó minden befejezett köre: idő, S1–S3, érvényesség, gumi, `is_player`, `team_id`. | `(session_id, car_idx, lap_num)` |
 | `samples` | A saját autó telemetriája a játék küldési ütemében (60 Hz-ig). | Hypertable a `time` oszlopon. Index: `(session_id, lap_num, time)` |
 | `users` | Discord-felhasználók: szerepkör, `udp_port` (egyedi). | `id`, egyedi: `discord_id` |
 | `auth_sessions` | Belépési munkamenetek. Csak a token **SHA-256** hash-e tárolódik. 30 napig élnek. | `token_hash` |
@@ -396,9 +397,12 @@ Minden végpont belépéshez kötött (kivéve `/healthz`). JSON-t ad vissza, `C
 | `GET /api/feeds/{port}/workbench` | **WebSocket**, a `WB` dokumentum 10 Hz-en; a `slow` rész csak minden 10. üzenetben. A kliens küldhet `{"focus": carIdx}` üzenetet; `-1` a saját autó. |
 | `GET /api/feeds/{port}/segments?track=ID` | Időmérő-szakaszok: pilótánkénti legjobb kör és szektorok Q1–Q3 és Short Q szerint. Csak az adott porton és pályán, az elmúlt 12 órából (session-típus 5–9). |
 | `GET /api/sessions?track=&player=&limit=&all=1` | Sessionlista (alapból 100, legfeljebb 500). Alapból csak azok a sessionök jönnek, ahol a saját autónak van befejezett köre; az `all=1` mindet mutatja. |
-| `GET /api/sessions/{id}` | Egy session adatai. |
-| `GET /api/sessions/{id}/laps` | Körök: `carIdx, lapNum, driver, isPlayer, lapTimeMs, s1Ms, s2Ms, s3Ms, valid, tyreVisual`. |
+| `GET /api/sessions/{id}` | Egy session adatai, plusz `setup`, `field`, `classification` ha már el van mentve. |
+| `GET /api/sessions/{id}/laps` | Körök: `carIdx, lapNum, driver, isPlayer, lapTimeMs, s1Ms, s2Ms, s3Ms, valid, tyreVisual, teamId`. |
+| `GET /api/sessions/{id}/fuel` | A saját autó üzemanyag- és ERS-értéke körönként (minták eleje/vége). |
 | `GET /api/sessions/{id}/laps/{lap}/telemetry` | Egy saját kör telemetriája oszloposan: `dist, t, speed, throttle, brake, steer, gear, rpm, drs, ersMJ, x, z`. Csak az utolsó próbálkozás marad meg (flashback után), és az időt a hivatalos köridőre skálázza. |
+| `GET /api/tracks` | Pályák a rögzített sessionökből: körök, sessionök, pilóták, best lap. |
+| `GET /api/tracks/{id}` | Pálya-részlet: KPI-k, race stintek, compound statisztika, best-lap setupok. |
 | `GET /api/views` · `POST /api/views` · `PUT /api/views/{id}` · `DELETE /api/views/{id}` | Workbench-nézetek. A törzs: `{name, layout}`, legfeljebb 256 KB, a név legfeljebb 80 karakter. |
 | `GET /api/aliases` · `PUT /api/aliases` | Pilóta-aliasok: `{játékbeliNév: alias}`, aliasonként legfeljebb 40 karakter. |
 | `GET /api/team` | Tagok listája. |

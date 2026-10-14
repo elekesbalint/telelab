@@ -15,135 +15,65 @@
 <div class="maincol">
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <span class="session"></span>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
   <div class="userbox" id="me"></div>
 </header>
-<main class="page">
-  <p class="back"><a href="/sessions.html">All sessions</a></p>
-  <h1 id="title">Session</h1>
-  <p class="lead" id="lead"></p>
+<main class="rev">
+  <div class="rev-top">
+    <p class="back" style="margin:0"><a id="back" href="/sessions.html">Back</a></p>
+    <h1 id="title">Session</h1>
+    <select id="pick" aria-label="Select a session"><option>Select a session…</option></select>
+    <a class="ses-btn" id="cmp-ses" href="/sessions.html">Compare two sessions</a>
+  </div>
+  <div class="rev-kind" id="kind"></div>
+  <p class="rev-banner" id="banner"></p>
 
   <section class="panel">
-    <h2>Lap times</h2>
-    <div id="chart" class="chart"></div>
+    <h2>Race director</h2>
+    <div class="rev-sub" id="dir-tabs">
+      <button type="button" class="on live" data-tab="drivers">Drivers</button>
+      <button type="button" data-tab="incidents">Incidents</button>
+      <button type="button" data-tab="pits">Pit stops</button>
+      <button type="button" data-tab="ird">Individual race director</button>
+      <button type="button" data-tab="trace">Race trace</button>
+    </div>
+    <div id="director"></div>
   </section>
 
-  <section class="panel" style="margin-top:16px">
-    <div class="panel-head">
-      <h2>Laps</h2>
-      <button class="primary" id="compare" disabled>Compare selected laps</button>
+  <section class="panel" style="margin-top:14px">
+    <div class="rev-lap-head">
+      <h2>Race lap detail</h2>
+      <div class="rev-lap-tools">
+        <label class="dv-muted">Driver
+          <select id="car"></select>
+        </label>
+        <button type="button" class="ses-btn" id="cmp-drv">Compare drivers</button>
+        <button type="button" class="ses-btn" id="reset">Reset charts</button>
+        <button type="button" class="ses-btn" id="csv">Export CSV</button>
+      </div>
     </div>
-    <p class="hint" id="pick-hint">Pick one lap as A and one as B. On the comparison page you can also pick B from another session.</p>
-    <div class="table-wrap">
+    <div class="rev-charts">
+      <div class="rev-chart-box"><h3>Lap times</h3><div id="chart-laps" class="rev-chart"></div></div>
+      <div class="rev-chart-box" id="fuel-box"><h3>Fuel remaining</h3><div id="chart-fuel" class="rev-chart"></div></div>
+    </div>
+    <div class="table-wrap rev-wide">
       <table class="laps">
-        <thead><tr><th>A</th><th>B</th><th>Lap</th><th>Lap time</th><th>S1</th><th>S2</th><th>S3</th><th>Tyre</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Lap#</th><th>Tyre</th><th>Lap time</th><th>Total race time</th>
+            <th>S1</th><th>S2</th><th>S3</th>
+            <th>Battery used</th><th>Fuel used</th><th>Fuel laps</th>
+          </tr>
+        </thead>
         <tbody id="laps"></tbody>
       </table>
     </div>
-  </section>
-
-  <section class="panel" style="margin-top:16px">
-    <h2>Best laps of the field</h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>#</th><th>Driver</th><th>Best lap</th><th>Gap</th><th>Laps</th></tr></thead>
-        <tbody id="field"></tbody>
-      </table>
-    </div>
+    <p class="hint">Battery and fuel come from the player car samples. Tyre wear, rain and tyre temps are live-only and not stored per lap yet. Invalid laps stay in the table, dimmed.</p>
   </section>
 </main>
-<script src="vendor/uPlot.iife.min.js"></script>
-<script type="module">
-  import { initNav, escapeHtml } from "./nav.js";
-  import { fmtLap, fmtDelta, fmtDate, COMPOUND, COMPOUND_NAME } from "./fmt.js";
-  await initNav();
-  const $ = (id) => document.getElementById(id);
-  const id = new URLSearchParams(location.search).get("id");
-  const [ses, laps] = await Promise.all([
-    fetch(`/api/sessions/${id}`).then((r) => (r.ok ? r.json() : null)),
-    fetch(`/api/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : [])),
-  ]);
-  if (!ses) { $("title").textContent = "Session not found"; throw new Error("not found"); }
-  document.title = `${ses.player} – ${ses.track} · TeleLab`;
-  $("title").textContent = `${ses.player || "?"}, ${ses.track}`;
-  $("lead").textContent = `${ses.type}, ${fmtDate(ses.startedAt)}${ses.online ? ", online" : ""}. Best valid lap: ${fmtLap(ses.bestLapMs)}.`;
-
-  const mine = laps.filter((l) => l.isPlayer).sort((a, b) => a.lapNum - b.lapNum);
-  const best = (k) => Math.min(...mine.filter((l) => l.valid && l[k]).map((l) => l[k]));
-  const bestLap = best("lapTimeMs"), b1 = best("s1Ms"), b2 = best("s2Ms"), b3 = best("s3Ms");
-  const cls = (v, b) => (v && v === b ? "purple" : "");
-
-  $("laps").innerHTML = mine.map((l) => `
-    <tr class="${l.valid ? "" : "invalid"}">
-      <td><input type="radio" name="a" value="${l.lapNum}" aria-label="Use lap ${l.lapNum} as A"></td>
-      <td><input type="radio" name="b" value="${l.lapNum}" aria-label="Use lap ${l.lapNum} as B"></td>
-      <td>${l.lapNum}</td>
-      <td class="${cls(l.lapTimeMs, bestLap)}">${fmtLap(l.lapTimeMs)}</td>
-      <td class="${cls(l.s1Ms, b1)}">${fmtLap(l.s1Ms)}</td>
-      <td class="${cls(l.s2Ms, b2)}">${fmtLap(l.s2Ms)}</td>
-      <td class="${cls(l.s3Ms, b3)}">${fmtLap(l.s3Ms)}</td>
-      <td><span class="dot" style="--c:${COMPOUND[l.tyreVisual] || "var(--line)"}"></span>${COMPOUND_NAME[l.tyreVisual] || ""}</td>
-      <td>${l.valid ? "" : "invalid"}</td>
-    </tr>`).join("") || `<tr><td colspan="9">You have no completed laps in this session.</td></tr>`;
-
-  // default selection: A = best lap, B = second best
-  const ranked = mine.filter((l) => l.valid).sort((a, b) => a.lapTimeMs - b.lapTimeMs);
-  if (ranked[0]) document.querySelector(`input[name=a][value="${ranked[0].lapNum}"]`).checked = true;
-  if (ranked[1]) document.querySelector(`input[name=b][value="${ranked[1].lapNum}"]`).checked = true;
-  const sync = () => {
-    const a = document.querySelector("input[name=a]:checked"), b = document.querySelector("input[name=b]:checked");
-    $("compare").disabled = !a;
-    $("compare").textContent = a && b ? `Compare lap ${a.value} and lap ${b.value}` : a ? `Open lap ${a.value}` : "Pick a lap";
-  };
-  $("laps").addEventListener("change", sync);
-  sync();
-  $("compare").addEventListener("click", () => {
-    const a = document.querySelector("input[name=a]:checked")?.value, b = document.querySelector("input[name=b]:checked")?.value;
-    const q = new URLSearchParams({ a: `${id}:${a}` });
-    if (b && b !== a) q.set("b", `${id}:${b}`);
-    location.href = `/compare.html?${q}`;
-  });
-
-  // field: best lap per car
-  const byCar = new Map();
-  for (const l of laps) {
-    const c = byCar.get(l.carIdx) ?? { driver: l.driver, isPlayer: l.isPlayer, best: 0, n: 0 };
-    c.n++;
-    if (l.valid && (!c.best || l.lapTimeMs < c.best)) c.best = l.lapTimeMs;
-    byCar.set(l.carIdx, c);
-  }
-  const field = [...byCar.values()].filter((c) => c.best).sort((a, b) => a.best - b.best);
-  $("field").innerHTML = field.map((c, i) => `
-    <tr class="${c.isPlayer ? "me" : ""}"><td>${i + 1}</td><td class="name">${escapeHtml(c.driver || "?")}</td>
-    <td class="${i === 0 ? "purple" : ""}">${fmtLap(c.best)}</td><td>${i ? fmtDelta(c.best - field[0].best) : "–"}</td><td>${c.n}</td></tr>`).join("")
-    || `<tr><td colspan="5">No valid laps.</td></tr>`;
-
-  // lap time chart
-  if (mine.length) {
-    const css = getComputedStyle(document.documentElement);
-    const col = (v) => css.getPropertyValue(v).trim();
-    const xs = mine.map((l) => l.lapNum);
-    const valid = mine.map((l) => (l.valid ? l.lapTimeMs / 1000 : null));
-    const invalid = mine.map((l) => (l.valid ? null : l.lapTimeMs / 1000));
-    const el = $("chart");
-    const plot = new uPlot({
-      width: el.clientWidth, height: 240,
-      legend: { show: false },
-      cursor: { points: { size: 8 } },
-      scales: { x: { time: false } },
-      axes: [
-        { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, label: "Lap", labelSize: 20, incrs: [1, 2, 5, 10] },
-        { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, size: 70, values: (u, v) => v.map((s) => fmtLap(Math.round(s * 1000))) },
-      ],
-      series: [
-        {},
-        { label: "Valid", stroke: col("--amber"), width: 2, points: { size: 7, fill: col("--amber") }, spanGaps: true },
-        { label: "Invalid", stroke: "transparent", points: { show: true, size: 7, stroke: col("--dim"), fill: col("--panel") } },
-      ],
-    }, [xs, valid, invalid], el);
-    new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: 240 })).observe(el);
-  }
-</script>
 </div>
+<script src="vendor/uPlot.iife.min.js"></script>
+<script type="module" src="session.js"></script>
 </body>
 </html>

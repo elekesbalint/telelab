@@ -47,6 +47,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sessions/{id}", s.getSession)
 	mux.HandleFunc("GET /api/sessions/{id}/laps", s.sessionLaps)
 	mux.HandleFunc("GET /api/sessions/{id}/laps/{lap}/telemetry", s.lapTelemetry)
+	mux.HandleFunc("GET /api/sessions/{id}/fuel", s.sessionFuel)
+	mux.HandleFunc("GET /api/tracks", s.listTracks)
+	mux.HandleFunc("GET /api/tracks/{id}", s.getTrack)
 	mux.HandleFunc("GET /api/feeds/{port}/workbench", s.workbenchSocket)
 	mux.HandleFunc("GET /api/feeds/{port}/segments", s.segments)
 	mux.HandleFunc("GET /api/views", s.listViews)
@@ -167,7 +170,7 @@ func (s *Server) sessionLaps(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	rows, err := s.DB.QueryContext(r.Context(), `
 		SELECT car_idx, lap_num, driver_name, is_player, lap_time_ms, COALESCE(s1_ms,0), COALESCE(s2_ms,0), COALESCE(s3_ms,0),
-		       valid, COALESCE(tyre_visual,0)
+		       valid, COALESCE(tyre_visual,0), COALESCE(team_id,0)
 		FROM laps WHERE session_id = $1 ORDER BY car_idx, lap_num`, id)
 	if err != nil {
 		httpError(w, err)
@@ -185,11 +188,12 @@ func (s *Server) sessionLaps(w http.ResponseWriter, r *http.Request) {
 		S3         int    `json:"s3Ms"`
 		Valid      bool   `json:"valid"`
 		TyreVisual int    `json:"tyreVisual"`
+		TeamID     int    `json:"teamId"`
 	}
 	out := []row{}
 	for rows.Next() {
 		var x row
-		if err := rows.Scan(&x.CarIdx, &x.LapNum, &x.Driver, &x.IsPlayer, &x.LapTimeMs, &x.S1, &x.S2, &x.S3, &x.Valid, &x.TyreVisual); err != nil {
+		if err := rows.Scan(&x.CarIdx, &x.LapNum, &x.Driver, &x.IsPlayer, &x.LapTimeMs, &x.S1, &x.S2, &x.S3, &x.Valid, &x.TyreVisual, &x.TeamID); err != nil {
 			httpError(w, err)
 			return
 		}

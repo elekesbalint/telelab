@@ -12,7 +12,7 @@ const LIVE = [
 
 const REVIEW = [
   { href: "/sessions.html", label: "Sessions" },
-  { href: "/soon.html?t=Tracks", label: "Tracks", soon: true },
+  { href: "/tracks.html", label: "Tracks", match: ["/tracks.html", "/track.html"] },
   { href: "/sessions.html", label: "Session Review", match: ["/session.html"] },
   { href: "/compare.html", label: "Driver Comparison" },
   { href: "/soon.html?t=Lap%20Leaderboard", label: "Lap Leaderboard", soon: true },

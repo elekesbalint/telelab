@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="trk">
+  <p class="back"><a href="/tracks.html">Tracks</a></p>
+  <div class="trk-title">
+    <h1 id="title">Track</h1>
+    <div class="trk-filters">
+      <span>Race data</span>
+      <div class="trk-pct" id="pct">
+        <button type="button" data-pct="25">25%</button>
+        <button type="button" data-pct="35">35%</button>
+        <button type="button" class="on" data-pct="50">50%</button>
+        <button type="button" data-pct="100">100%</button>
+        <button type="button" data-pct="all">All</button>
+      </div>
+      <select id="driver"><option value="">All drivers</option></select>
+      <select id="sess"><option value="">All sessions</option></select>
+    </div>
+  </div>
+
+  <div class="trk-kpis" id="kpis"></div>
+
+  <section class="panel trk-block">
+    <h2>Reference stints — quickest completed races here</h2>
+    <p class="dv-muted">Click a row to load it lap by lap below. Setup opens the last stored car setup for that session.</p>
+    <div class="table-wrap">
+      <table class="trk-table">
+        <thead><tr>
+          <th>#</th><th>Driver</th><th>Race time</th><th>Gap</th><th>Strategy</th>
+          <th>Stops</th><th>Best lap</th><th>Laps</th><th>Cond</th><th>Date</th><th></th>
+        </tr></thead>
+        <tbody id="races"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel trk-block">
+    <h2>Stint explorer</h2>
+    <p class="dv-muted" id="explorer-hint">Pick a reference stint above to see it lap by lap.</p>
+    <div class="table-wrap" id="explorer-wrap" hidden>
+      <table class="trk-table">
+        <thead><tr><th>Lap</th><th>Tyre</th><th>Lap time</th><th>S1</th><th>S2</th><th>S3</th><th></th></tr></thead>
+        <tbody id="explorer"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel trk-block">
+    <h2>Compound data — your team · selected races only</h2>
+    <div class="table-wrap">
+      <table class="trk-table">
+        <thead><tr><th>Compound</th><th>Pace</th><th>Best</th><th>Drop-off</th><th>Max stint</th><th>Samples</th></tr></thead>
+        <tbody id="comp"></tbody>
+      </table>
+    </div>
+    <h2 style="margin-top:18px">Stint simulator</h2>
+    <p class="dv-muted">Predict pace from median lap and observed drop-off. Pick compounds and stint lengths, then run.</p>
+    <div class="trk-sim" id="sim"></div>
+    <p class="trk-sim-out" id="sim-out">Pick compounds + stint lengths and click Run simulation.</p>
+  </section>
+
+  <section class="panel trk-block">
+    <h2>Compound performance</h2>
+    <h3 class="dv-muted" style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em">Quali laps</h3>
+    <div class="table-wrap">
+      <table class="trk-table">
+        <thead><tr><th>Compound</th><th>Laps</th><th>Best</th><th>Median</th></tr></thead>
+        <tbody id="quali"></tbody>
+      </table>
+    </div>
+    <h3 class="dv-muted" style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em">Race laps</h3>
+    <div class="table-wrap">
+      <table class="trk-table">
+        <thead><tr><th>Compound</th><th>Laps</th><th>Best</th><th>Median</th><th>Wear/lap</th><th>Drop-off</th><th>Score</th></tr></thead>
+        <tbody id="race-perf"></tbody>
+      </table>
+    </div>
+    <p class="hint">Score 100 is the fastest median compound on this track. Tyre wear, tyre temps and pit-loss charts need per-lap samples TeleLab does not store yet.</p>
+  </section>
+
+  <section class="panel trk-block">
+    <h2>Best-lap setups</h2>
+    <p class="dv-muted">The car that set this lap, from the last stored setup of that session. Older sessions may be empty until you drive again.</p>
+    <div class="table-wrap">
+      <table class="trk-table trk-setups" id="setups"></table>
+    </div>
+  </section>
+</main>
+</div>
+<div class="trk-modal" id="modal" hidden>
+  <div class="trk-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header><h2 id="modal-title">Setup</h2><button type="button" class="btn" id="modal-close">×</button></header>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<script type="module" src="track.js"></script>
+</body>
+</html>
