@@ -29,12 +29,24 @@ type State struct {
 	Damage       *f1udp.PacketCarDamageData
 	Motion       *f1udp.PacketMotionData
 	History      [f1udp.MaxCars]*f1udp.PacketSessionHistoryData
+	Setups       *f1udp.PacketCarSetupData
+	TyreSets     *f1udp.PacketTyreSetsData // player's car only
+
+	// Track outline learnt from the player's own driving: position by
+	// fraction of the lap, used to draw the track map.
+	Outline    [OutlineBins][2]float32
+	outlineSet [OutlineBins]bool
 
 	Counts     map[f1udp.PacketID]uint64
 	Errors     uint64
 	LastEvents []f1udp.Event // consumed by TakeEvents (console output)
 	Recent     []TimedEvent  // last events for the web views, not consumed
+
+	outlineTrack int8
 }
+
+// OutlineBins is the resolution of the learnt track outline.
+const OutlineBins = 400
 
 // TimedEvent is an event with the session time it happened at.
 type TimedEvent struct {
@@ -56,6 +68,7 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.Session, s.Participants, s.Lap = nil, nil, nil
 		s.Telemetry, s.Telemetry2, s.Status, s.Damage = nil, nil, nil, nil
 		s.Motion, s.History = nil, [f1udp.MaxCars]*f1udp.PacketSessionHistoryData{}
+		s.Setups, s.TyreSets = nil, nil
 		s.LastEvents, s.Recent = nil, nil
 	}
 	s.PlayerIdx = h.PlayerCarIndex
@@ -79,6 +92,13 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.Damage = v
 	case *f1udp.PacketMotionData:
 		s.Motion = v
+		s.learnOutline(h.PlayerCarIndex)
+	case *f1udp.PacketCarSetupData:
+		s.Setups = v
+	case *f1udp.PacketTyreSetsData:
+		if v.CarIdx == h.PlayerCarIndex {
+			s.TyreSets = v
+		}
 	case *f1udp.PacketSessionHistoryData:
 		if int(v.CarIdx) < f1udp.MaxCars {
 			s.History[v.CarIdx] = v
@@ -96,6 +116,31 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		if len(s.Recent) > 30 {
 			s.Recent = s.Recent[len(s.Recent)-30:]
 		}
+	}
+}
+
+// learnOutline stores the player's position at the current lap fraction.
+// The outline is kept across sessions on the same track (reset on track change).
+func (s *State) learnOutline(pi uint8) {
+	if s.Motion == nil || s.Lap == nil || s.Session == nil || int(pi) >= f1udp.MaxCars || s.Session.TrackLength == 0 {
+		return
+	}
+	if s.outlineTrack != s.Session.TrackID {
+		s.outlineTrack = s.Session.TrackID
+		s.Outline, s.outlineSet = [OutlineBins][2]float32{}, [OutlineBins]bool{}
+	}
+	d := s.Lap.LapData[pi].LapDistance
+	if d < 0 || d >= float32(s.Session.TrackLength) {
+		return
+	}
+	if s.Lap.LapData[pi].PitStatus != 0 {
+		return // pit lane is not the racing line
+	}
+	b := int(d / float32(s.Session.TrackLength) * OutlineBins)
+	m := s.Motion.CarMotionData[pi]
+	if b >= 0 && b < OutlineBins && (m.WorldPositionX != 0 || m.WorldPositionZ != 0) {
+		s.Outline[b] = [2]float32{m.WorldPositionX, m.WorldPositionZ}
+		s.outlineSet[b] = true
 	}
 }
 

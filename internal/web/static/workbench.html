@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workbench · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="workbench.css">
+</head>
+<body class="wb-body">
+<header class="bar" id="topbar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <nav class="nav" aria-label="Fő menü">
+    <a href="/">Élő</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  </nav>
+  <span class="session"></span>
+  <div class="userbox" id="me"></div>
+</header>
+
+<div class="wb-tools" id="tools">
+  <label class="sr" for="feed">Pilóta</label>
+  <select id="feed" class="wb-select"></select>
+  <label class="sr" for="view">Nézet</label>
+  <select id="view" class="wb-select"></select>
+  <p class="wb-status" id="status" data-state="off">Nincs kapcsolat</p>
+  <div class="wb-actions">
+    <button class="wb-btn edit-only primary" id="add">Panel hozzáadása</button>
+    <button class="wb-btn" id="edit" aria-pressed="false">Szerkesztés</button>
+    <button class="wb-btn" id="save">Mentés</button>
+    <button class="wb-btn" id="save-as">Mentés újként</button>
+    <button class="wb-btn" id="delete-view">Nézet törlése</button>
+    <button class="wb-btn" id="rename">Pilóták átnevezése</button>
+    <button class="wb-btn" id="export">Export</button>
+    <button class="wb-btn" id="import">Import</button>
+    <button class="wb-btn" id="hide-nav" aria-pressed="false">Menü elrejtése</button>
+    <button class="wb-btn" id="fullscreen">Teljes képernyő</button>
+  </div>
+</div>
+
+<main class="wb-grid" id="grid" aria-live="off"></main>
+<p class="wb-empty" id="empty" hidden>Ezen a porton most nem jön adat. Válassz egy élő pilótát fent, vagy indítsd el a játékot.</p>
+
+<dialog id="catalog" class="wb-dialog">
+  <form method="dialog">
+    <h2>Panel hozzáadása</h2>
+    <div class="catalog" id="catalog-list"></div>
+    <button class="wb-btn" value="cancel">Bezárás</button>
+  </form>
+</dialog>
+
+<dialog id="aliases" class="wb-dialog">
+  <form method="dialog" id="alias-form">
+    <h2>Pilóták átnevezése</h2>
+    <p class="hint">A játékbeli név mellé írd be, minek mutassa a TeleLab. Az egész csapatnál érvényes. Üresen hagyva az eredeti név marad.</p>
+    <div class="alias-list" id="alias-list"></div>
+    <div class="dialog-actions">
+      <button class="wb-btn" value="cancel">Mégse</button>
+      <button class="wb-btn primary" value="save" id="alias-save">Mentés</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+<script type="module" src="workbench.js"></script>
+</body>
+</html>

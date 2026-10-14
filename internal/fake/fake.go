@@ -40,7 +40,15 @@ func Frame(frame uint32, t float32) [][]byte {
 	brk := math.Max(0, math.Min(1, -corner*1.4-0.3))
 
 	ses := f1udp.PacketSessionData{Header: h(f1udp.IDSession), TrackID: 9, SessionType: 8, TotalLaps: 10, TrackTemperature: 31, AirTemperature: 24,
-		TrackLength: trackLen, Sector2LapDistanceStart: trackLen / 3, Sector3LapDistanceStart: 2 * trackLen / 3}
+		TrackLength: trackLen, Sector2LapDistanceStart: trackLen / 3, Sector3LapDistanceStart: 2 * trackLen / 3,
+		SessionTimeLeft: uint16(900 - int(t)%900), PitSpeedLimit: 80, NumWeatherForecastSamples: 10}
+	for k := 0; k < 10; k++ {
+		st, off := uint8(8), uint8(k*5)
+		if k >= 3 {
+			st, off = 15, uint8((k-3)*10)
+		}
+		ses.WeatherForecastSamples[k] = f1udp.WeatherForecastSample{SessionType: st, TimeOffset: off, Weather: uint8(min(5, k/2)), TrackTemperature: 31, AirTemperature: 24, RainPercentage: uint8(k * 9)}
+	}
 	names := []string{"Balint", "Rival One", "Rival Two", "Rival Three", "Rival Four"}
 	par := f1udp.PacketParticipantsData{Header: h(f1udp.IDParticipants), NumActiveCars: uint8(len(names))}
 	lapPkt := f1udp.PacketLapData{Header: h(f1udp.IDLapData)}
@@ -49,6 +57,9 @@ func Frame(frame uint32, t float32) [][]byte {
 	for i, n := range names {
 		par.Participants[i].TeamID = uint16(476 + i)
 		copy(par.Participants[i].Name[:], n)
+		par.Participants[i].AIControlled = uint8(map[bool]int{true: 1}[i > 0])
+		par.Participants[i].NumColours = 1
+		par.Participants[i].LiveryColours[0] = []f1udp.LiveryColour{{Red: 0, Green: 210, Blue: 190}, {Red: 220, Green: 0, Blue: 0}, {Red: 30, Green: 65, Blue: 255}, {Red: 0, Green: 90, Blue: 255}, {Red: 255, Green: 135, Blue: 0}}[i]
 		var last uint32
 		if lap > 1 {
 			last = lapTimeMs(lap-1) + uint32(i*180)
@@ -89,8 +100,25 @@ func Frame(frame uint32, t float32) [][]byte {
 	}
 	hist.TyreStintsHistoryData[0] = f1udp.TyreStintHistoryData{EndLap: 255, TyreActualCompound: 18, TyreVisualCompound: 16}
 
+	// rivals spread around the track
+	for i := 1; i < len(names); i++ {
+		a := angle - float64(i)*0.25
+		motion.CarMotionData[i].WorldPositionX, motion.CarMotionData[i].WorldPositionZ = float32(600*math.Cos(a)+80*math.Cos(3*a)), float32(350*math.Sin(a)+60*math.Sin(2*a))
+	}
+	sets := f1udp.PacketTyreSetsData{Header: h(f1udp.IDTyreSets), CarIdx: 0, FittedIdx: 2}
+	for k := 0; k < 8; k++ {
+		vis := []uint8{16, 16, 16, 17, 17, 18, 7, 8}[k]
+		act := map[uint8]uint8{16: 17, 17: 18, 18: 19, 7: 7, 8: 8}[vis]
+		sets.TyreSetData[k] = f1udp.TyreSetData{ActualTyreCompound: act, VisualTyreCompound: vis, Wear: uint8(map[bool]int{true: 4}[k == 2]),
+			Available: 1, RecommendedSession: 8, LifeSpan: 34, UsableLife: 34, LapDeltaTime: int16([]int{-27, -27, 0, 422, 422, 900, 4488, 5844}[k]), Fitted: uint8(map[bool]int{true: 1}[k == 2])}
+	}
+	setup := f1udp.PacketCarSetupData{Header: h(f1udp.IDCarSetups)}
+	setup.CarSetupData[0] = f1udp.CarSetupData{FrontWing: 27, RearWing: 24, OnThrottle: 80, OffThrottle: 40, FrontCamber: -3.5, RearCamber: -2, FrontToe: 0.02, RearToe: 0.12,
+		FrontSuspension: 41, RearSuspension: 3, FrontAntiRollBar: 11, RearAntiRollBar: 17, FrontSuspensionHeight: 23, RearSuspensionHeight: 49, BrakePressure: 100, BrakeBias: 58,
+		EngineBraking: 50, RearLeftTyrePressure: 21.9, RearRightTyrePressure: 21.9, FrontLeftTyrePressure: 23.3, FrontRightTyrePressure: 23.3, FuelLoad: 2}
+
 	var out [][]byte
-	for _, p := range []any{&ses, &par, &lapPkt, &tel, &st, &dmg, &t2, &hist, &motion} {
+	for _, p := range []any{&ses, &par, &lapPkt, &tel, &st, &dmg, &t2, &hist, &motion, &sets, &setup} {
 		var b bytes.Buffer
 		_ = binary.Write(&b, binary.LittleEndian, p)
 		out = append(out, b.Bytes())

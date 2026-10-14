@@ -77,3 +77,18 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS auth_sessions_expires ON auth_sessions (expires_at);
+
+-- Workbench layouts, shared by the whole team.
+CREATE TABLE IF NOT EXISTS workbench_views (
+    id         BIGSERIAL PRIMARY KEY,
+    name       TEXT        NOT NULL,
+    layout     JSONB       NOT NULL,
+    created_by BIGINT      REFERENCES users (id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Team-wide display names for in-game driver names ("Rename drivers").
+CREATE TABLE IF NOT EXISTS driver_aliases (
+    game_name TEXT PRIMARY KEY,
+    alias     TEXT NOT NULL
+);

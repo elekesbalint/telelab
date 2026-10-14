@@ -4,7 +4,7 @@
 
 A játék UDP-n küldi az adatokat a szerverre, a TeleLab ebből élő mérnöki nézeteket, kör-összehasonlítást, ranglistákat és stratégiai modelleket készít.
 
-> Állapot: **1. fázis.** UDP-fogadás, adatbázis (sessionök, körök, telemetria), élő Driver View, Discordos belépés, csapat- és portkezelés.
+> Állapot: **1. fázis.** UDP-fogadás, adatbázis (sessionök, körök, telemetria), élő Driver View, Workbench (testreszabható pit wall), sessionök és kör-összehasonlítás, Discordos belépés, csapat- és portkezelés.
 
 ## Mi van a repóban
 
