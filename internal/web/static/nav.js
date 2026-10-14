@@ -15,7 +15,7 @@ const REVIEW = [
   { href: "/tracks.html", label: "Tracks", match: ["/tracks.html", "/track.html"] },
   { href: "/sessions.html", label: "Session Review", match: ["/session.html"] },
   { href: "/compare.html", label: "Driver Comparison" },
-  { href: "/soon.html?t=Lap%20Leaderboard", label: "Lap Leaderboard", soon: true },
+  { href: "/laps.html", label: "Lap Leaderboard" },
   { href: "/soon.html?t=Quali%20Leaderboard", label: "Quali Leaderboard", soon: true },
   { href: "/soon.html?t=Stint%20Leaderboard", label: "Stint Leaderboard", soon: true },
   { href: "/soon.html?t=Lap%20Tracker", label: "Lap Tracker", soon: true },

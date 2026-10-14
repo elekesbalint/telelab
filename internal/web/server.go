@@ -51,6 +51,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/tracks", s.listTracks)
 	mux.HandleFunc("GET /api/tracks/{id}", s.getTrack)
 	mux.HandleFunc("GET /api/gamedata", s.gameData)
+	mux.HandleFunc("GET /api/leaderboard/laps", s.lapLeaderboard)
 	mux.HandleFunc("GET /api/feeds/{port}/workbench", s.workbenchSocket)
 	mux.HandleFunc("GET /api/feeds/{port}/segments", s.segments)
 	mux.HandleFunc("GET /api/views", s.listViews)

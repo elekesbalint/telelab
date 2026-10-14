@@ -952,3 +952,36 @@ body.has-side.wb-body .bar .brand { display: inline; }
   .gd { padding: 12px; }
   .gd-comp { grid-template-columns: 1fr; }
 }
+
+/* ---------- Lap leaderboard ---------- */
+.lb { max-width: none; width: 100%; box-sizing: border-box; padding: 12px 20px 36px; }
+.lb-head h1 { font: 700 32px/1 var(--num); margin: 0 0 6px; }
+.lb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 20px; }
+.lb-tools select {
+  background: var(--panel); color: var(--chalk); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 10px; font: inherit;
+}
+.lb-track { margin-bottom: 28px; }
+.lb-track h2 { font: 700 22px/1.1 var(--num); margin: 0 0 10px; }
+.lb-track h3 {
+  font: 600 11px/1.2 var(--text); color: var(--cold); margin: 14px 0 8px;
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.lb-table { font-size: 13px; }
+.lb-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.lb-tyre {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font: 700 10px/1.2 var(--num); letter-spacing: .04em; text-transform: uppercase;
+  border: 1px solid var(--c, var(--line)); color: var(--c, var(--chalk));
+}
+.lb-ses {
+  display: inline-block; padding: 2px 7px; border-radius: 4px; margin-right: 4px;
+  font: 700 10px var(--num); letter-spacing: .04em; text-transform: uppercase;
+}
+.lb-ses.quali { color: var(--amber); border: 1px solid var(--amber); }
+.lb-ses.race { color: var(--thr); border: 1px solid var(--thr); }
+.lb-on { font: 700 10px var(--num); letter-spacing: .04em; text-transform: uppercase; }
+.lb-on.yes { color: var(--thr); }
+.lb-on.no { color: var(--dim); }
+.lb-view { display: flex; gap: 4px; justify-content: flex-end; }
+@media (max-width: 720px) { .lb { padding: 12px; } }

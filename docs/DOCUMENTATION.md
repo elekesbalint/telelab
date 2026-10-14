@@ -88,6 +88,7 @@ Elkészült fázisok:
 | **Connect** | `connect.html` | A belépett pilóta saját beállításai: szerver IP és saját port. Mellette a csapat portkiosztása. |
 | **Team** | `team.html` | Tagok listája. A tulajdonos itt állítja a szerepköröket és a portokat, és itt törölhet tagot. |
 | **F1 26 Game Data** | `gamedata.html` | Referencia-táblák: pályánkénti C-kiosztás, gumi-grip hőmérsékletre, motor-teljesítmény hőre, plusz a csapat futamaiból pit-loss, üzemanyag és gumikopás. |
+| **Lap Leaderboard** | `laps.html` | Pályánként a 5 leggyorsabb érvényes quali- és race-kör, a csapat pilótái közül. |
 | Login / Pending | `login.html`, `pending.html` | Belépés Discorddal. Aki még nincs jóváhagyva, egy várakozó oldalt lát. |
 
 ### Workbench-panelek
@@ -405,6 +406,7 @@ Minden végpont belépéshez kötött (kivéve `/healthz`). JSON-t ad vissza, `C
 | `GET /api/tracks` | Pályák a rögzített sessionökből: körök, sessionök, pilóták, best lap. |
 | `GET /api/tracks/{id}` | Pálya-részlet: KPI-k, race stintek, compound statisztika, best-lap setupok. |
 | `GET /api/gamedata?driver=` | F1 26 referencia + csapatból számolt pit/fuel/wear aggregátumok. |
+| `GET /api/leaderboard/laps` | Lap leaderboard: top 5 quali/race kör pályánként. Szűrők: `kind, track, tyre, driver, type, q`. |
 | `GET /api/views` · `POST /api/views` · `PUT /api/views/{id}` · `DELETE /api/views/{id}` | Workbench-nézetek. A törzs: `{name, layout}`, legfeljebb 256 KB, a név legfeljebb 80 karakter. |
 | `GET /api/aliases` · `PUT /api/aliases` | Pilóta-aliasok: `{játékbeliNév: alias}`, aliasonként legfeljebb 40 karakter. |
 | `GET /api/team` | Tagok listája. |
