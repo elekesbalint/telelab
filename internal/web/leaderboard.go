@@ -65,7 +65,9 @@ func (s *Server) lapLeaderboard(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	kind := q.Get("kind") // both | quali | race
-	track, _ := strconv.Atoi(q.Get("track"))
+	trackStr := q.Get("track")
+	track, errTrack := strconv.Atoi(trackStr)
+	trackOK := trackStr != "" && errTrack == nil
 	tyre, _ := strconv.Atoi(q.Get("tyre"))
 	driver := q.Get("driver")
 	stype := q.Get("type")
@@ -119,7 +121,7 @@ func (s *Server) lapLeaderboard(w http.ResponseWriter, r *http.Request) {
 		if kind == "race" && !rKind {
 			continue
 		}
-		if track > 0 && x.track != track {
+		if trackOK && x.track != track {
 			continue
 		}
 		if tyre > 0 && x.vis != tyre {

@@ -42,7 +42,7 @@ function table(rows) {
   return `<div class="table-wrap"><table class="lb-table">
     <thead><tr>
       <th>#</th><th>Driver</th><th>Lap time</th><th>Gap</th><th>S1</th><th>S2</th><th>S3</th>
-      <th>Tyre</th><th>Session</th><th>Date</th><th></th>
+      <th>Tyre</th><th>Session</th><th>Date</th><th>View</th>
     </tr></thead>
     <tbody>${rows.map((r) => `
       <tr>
@@ -97,7 +97,7 @@ function render() {
 async function load() {
   const p = new URLSearchParams();
   if ($("kind").value !== "both") p.set("kind", $("kind").value);
-  if ($("track").value) p.set("track", $("track").value);
+  if ($("track").value !== "") p.set("track", $("track").value);
   if ($("q").value.trim()) p.set("q", $("q").value.trim());
   if ($("stype").value) p.set("type", $("stype").value);
   if ($("tyre").value) p.set("tyre", $("tyre").value);
