@@ -43,7 +43,7 @@ func scanSession(row interface{ Scan(...any) error }) (sessionRow, error) {
 		&x.StartedAt, &x.LastPacket, &x.PlayerLaps, &x.BestLapMs, &x.HasSamples)
 	x.Track = f1udp.Name(f1udp.TrackNames, int8(x.TrackID))
 	if x.TrackID < 0 {
-		x.Track = "Ismeretlen pálya"
+		x.Track = "Unknown track"
 	}
 	x.Type = f1udp.Name(f1udp.SessionTypeNames, uint8(x.SessionType))
 	return x, err

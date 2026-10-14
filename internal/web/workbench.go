@@ -141,12 +141,12 @@ func readView(r *http.Request) (viewBody, bool) {
 
 func (s *Server) createView(w http.ResponseWriter, r *http.Request) {
 	if s.Store == nil {
-		http.Error(w, "nincs adatbázis", http.StatusServiceUnavailable)
+		http.Error(w, "no database", http.StatusServiceUnavailable)
 		return
 	}
 	b, ok := readView(r)
 	if !ok {
-		http.Error(w, "hibás nézet", http.StatusBadRequest)
+		http.Error(w, "invalid view", http.StatusBadRequest)
 		return
 	}
 	uid, _, _ := currentUserID(r)
@@ -175,7 +175,7 @@ func (s *Server) updateView(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	b, ok := readView(r)
 	if !ok {
-		http.Error(w, "hibás nézet", http.StatusBadRequest)
+		http.Error(w, "invalid view", http.StatusBadRequest)
 		return
 	}
 	allowed, err := s.canEditView(r, id)
@@ -188,7 +188,7 @@ func (s *Server) updateView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		http.Error(w, "ezt a nézetet csak a készítője vagy a tulajdonos módosíthatja; mentsd újként", http.StatusForbidden)
+		http.Error(w, "only the author or the team owner can change this view; save it as a new one", http.StatusForbidden)
 		return
 	}
 	if err := s.Store.UpdateView(r.Context(), id, b.Name, b.Layout); err != nil {
@@ -210,7 +210,7 @@ func (s *Server) deleteView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		http.Error(w, "ezt a nézetet csak a készítője vagy a tulajdonos törölheti", http.StatusForbidden)
+		http.Error(w, "only the author or the team owner can delete this view", http.StatusForbidden)
 		return
 	}
 	if err := s.Store.DeleteView(r.Context(), id); err != nil {
@@ -235,18 +235,18 @@ func (s *Server) getAliases(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) putAliases(w http.ResponseWriter, r *http.Request) {
 	if s.Store == nil {
-		http.Error(w, "nincs adatbázis", http.StatusServiceUnavailable)
+		http.Error(w, "no database", http.StatusServiceUnavailable)
 		return
 	}
 	var m map[string]string
 	if err := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 64<<10)).Decode(&m); err != nil {
-		http.Error(w, "hibás kérés", http.StatusBadRequest)
+		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 	for k, v := range m {
 		m[k] = strings.TrimSpace(v)
 		if len(v) > 40 {
-			http.Error(w, "túl hosszú név", http.StatusBadRequest)
+			http.Error(w, "name too long", http.StatusBadRequest)
 			return
 		}
 	}

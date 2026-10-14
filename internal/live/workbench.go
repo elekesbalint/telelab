@@ -205,7 +205,7 @@ type WBCell struct {
 var actualCompound = map[uint8]string{16: "C5", 17: "C4", 18: "C3", 19: "C2", 20: "C1", 21: "C0", 22: "C6", 7: "Inter", 8: "Wet",
 	9: "Classic", 10: "Classic wet", 11: "Super soft", 12: "Soft", 13: "Medium", 14: "Hard", 15: "Wet"}
 
-var driverStatusHU = map[uint8]string{0: "Garázsban", 1: "Mért kör", 2: "Befutó kör", 3: "Kifutó kör", 4: "Pályán"}
+var driverStatusText = map[uint8]string{0: "In garage", 1: "Flying lap", 2: "In lap", 3: "Out lap", 4: "On track"}
 
 func lapSectors(l f1udp.LapHistoryData) (uint32, uint32, uint32) {
 	return uint32(l.Sector1TimeMinutesPart)*60000 + uint32(l.Sector1TimeMSPart),
@@ -263,14 +263,14 @@ func (s *State) Workbench(focus int, slow bool) *WB {
 				GapLeader: l.DeltaToRaceLeaderMS(), Interval: l.DeltaToCarInFrontMS(), SpeedTrap: l.SpeedTrapFastestSpeed,
 				Lap: l.CurrentLapNum, PitStatus: l.PitStatus, Pits: l.NumPitStops, Penalties: l.Penalties,
 				Warnings: l.TotalWarnings, Invalid: l.CurrentLapInvalid == 1, LapDistance: l.LapDistance,
-				Status: driverStatusHU[l.DriverStatus]}
+				Status: driverStatusText[l.DriverStatus]}
 			if l.PitStatus == 1 {
-				c.Status = "Boxutcában"
+				c.Status = "Pit lane"
 			} else if l.PitStatus == 2 {
-				c.Status = "Boxban"
+				c.Status = "In pits"
 			}
 			if l.ResultStatus >= 3 {
-				c.Status = map[uint8]string{3: "Célba ért", 4: "Kiesett", 5: "Kizárva", 6: "Nem rangsorolt", 7: "Feladta"}[l.ResultStatus]
+				c.Status = map[uint8]string{3: "Finished", 4: "DNF", 5: "Disqualified", 6: "Not classified", 7: "Retired"}[l.ResultStatus]
 			}
 			if s.Participants != nil {
 				p := s.Participants.Participants[i]
@@ -405,14 +405,14 @@ func (s *State) detail(i int) *WBDetail {
 	}
 	if s.Telemetry2 != nil {
 		t2 := s.Telemetry2.CarTelemetry2Data[i]
-		d.Aero = map[bool]string{true: "egyenes", false: "kanyar"}[t2.ActiveAeroMode == 1]
+		d.Aero = map[bool]string{true: "straight", false: "corner"}[t2.ActiveAeroMode == 1]
 		switch {
 		case t2.OvertakeActive == 1:
-			d.Overtake = "aktív"
+			d.Overtake = "active"
 		case t2.OvertakeAvailable == 1:
-			d.Overtake = "elérhető"
+			d.Overtake = "available"
 		default:
-			d.Overtake = "nem elérhető"
+			d.Overtake = "not available"
 		}
 	}
 	if s.Damage != nil {

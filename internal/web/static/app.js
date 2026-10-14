@@ -4,9 +4,9 @@ import { initNav } from "./nav.js";
 
 const $ = (id) => document.getElementById(id);
 const COMPOUND = { Soft: "var(--soft)", Medium: "var(--medium)", Hard: "var(--hard)", Inter: "var(--inter)", Wet: "var(--wet)" };
-const COMPOUND_HU = { Soft: "Soft", Medium: "Medium", Hard: "Hard", Inter: "Intermediate", Wet: "Esőgumi" };
-const ERS_HU = { None: "nincs", Medium: "medium", Hotlap: "hotlap", Boost: "boost" };
-const DAMAGE_HU = { frontLeftWing: "Bal első szárny", frontRightWing: "Jobb első szárny", rearWing: "Hátsó szárny", floor: "Padló", diffuser: "Diffúzor", sidepod: "Oldaldoboz", gearbox: "Váltó", engine: "Motor" };
+const COMPOUND_HU = { Soft: "Soft", Medium: "Medium", Hard: "Hard", Inter: "Intermediate", Wet: "Wet" };
+const ERS_HU = { None: "none", Medium: "medium", Hotlap: "hotlap", Boost: "boost" };
+const DAMAGE_HU = { frontLeftWing: "Front left wing", frontRightWing: "Front right wing", rearWing: "Rear wing", floor: "Floor", diffuser: "Diffuser", sidepod: "Sidepod", gearbox: "Gearbox", engine: "Engine" };
 const ERS_MAX_MJ = 4;
 const TRACE_SECONDS = 20;
 
@@ -47,8 +47,8 @@ async function loadFeeds() {
   for (const f of feeds) {
     const o = document.createElement("option");
     o.value = f.port;
-    const who = f.owner || f.player || "ismeretlen";
-    o.textContent = f.active ? `${who}, ${f.track || "?"} (élő)` : `${f.owner || "szabad port"} (${f.port})`;
+    const who = f.owner || f.player || "unknown";
+    o.textContent = f.active ? `${who}, ${f.track || "?"} (live)` : `${f.owner || "free port"} (${f.port})`;
     sel.append(o);
   }
   const active = feeds.find((f) => f.active);
@@ -70,7 +70,7 @@ function connect(port) {
   trace = [];
   sectorBests = {};
   if (ws) ws.close();
-  setConn("off", "Kapcsolódás…");
+  setConn("off", "Connecting…");
   $("empty-port").textContent = port;
   $("empty-ip").textContent = publicIp || location.hostname;
   showEmpty(true);
@@ -79,7 +79,7 @@ function connect(port) {
   ws.onmessage = (ev) => render(JSON.parse(ev.data));
   ws.onclose = () => {
     if (currentPort !== port) return;
-    setConn("off", "Kapcsolat megszakadt, újrapróbálom…");
+    setConn("off", "Connection lost, retrying…");
     setTimeout(() => currentPort === port && connect(port), 3000);
   };
 }
@@ -98,14 +98,14 @@ function showEmpty(empty) {
 function render(s) {
   if (s.sessionUid !== lastUid) { lastUid = s.sessionUid; trace = []; sectorBests = {}; }
   const stale = s.ageMs > 3000;
-  setConn(stale ? "stale" : "live", stale ? `Utolsó adat ${Math.round(s.ageMs / 1000)} mp-e` : "Élő");
+  setConn(stale ? "stale" : "live", stale ? `Last data ${Math.round(s.ageMs / 1000)} s ago` : "Live");
   const p = s.player;
   showEmpty(!s.session || !p);
   if (!s.session || !p) return;
 
   const ses = s.session;
-  const parts = [ses.track, ses.type, ses.totalLaps > 1 ? `${ses.totalLaps} kör` : null,
-    `pálya ${ses.trackTemp} °C, levegő ${ses.airTemp} °C`, ses.rainPct ? `eső ${ses.rainPct}%` : null];
+  const parts = [ses.track, ses.type, ses.totalLaps > 1 ? `${ses.totalLaps} laps` : null,
+    `track ${ses.trackTemp} °C, air ${ses.airTemp} °C`, ses.rainPct ? `rain ${ses.rainPct}%` : null];
   $("session").textContent = parts.filter(Boolean).join(", ");
 
   // driving
@@ -115,7 +115,7 @@ function render(s) {
   const rpmBar = $("rpm-bar");
   rpmBar.style.width = `${rpmPct}%`;
   rpmBar.classList.toggle("redline", rpmPct > 96);
-  $("rpm").textContent = p.rpm.toLocaleString("hu-HU");
+  $("rpm").textContent = p.rpm.toLocaleString("en-GB");
   $("engine").textContent = `${p.engineTemp} °C`;
   $("bias").textContent = p.brakeBias ? `${p.brakeBias}%` : "–";
   $("thr-bar").style.width = `${p.throttle * 100}%`;
@@ -123,12 +123,12 @@ function render(s) {
 
   // timing
   $("pos").textContent = p.position || "–";
-  $("lap").textContent = ses.totalLaps > 1 ? `Kör ${p.lap} / ${ses.totalLaps}` : `Kör ${p.lap}`;
+  $("lap").textContent = ses.totalLaps > 1 ? `Lap ${p.lap} / ${ses.totalLaps}` : `Lap ${p.lap}`;
   $("cur").textContent = fmtLap(p.curLapMs);
   $("invalid").hidden = !p.invalid;
   $("s1").textContent = fmtLap(p.s1Ms);
   $("s2").textContent = fmtLap(p.s2Ms);
-  $("sector").textContent = `${p.sector + 1}. szektor`;
+  $("sector").textContent = `Sector ${p.sector + 1}`;
   trackSectors(s.cars);
   colorSector($("s1").parentElement, p.idx, "s1", p.s1Ms);
   colorSector($("s2").parentElement, p.idx, "s2", p.s2Ms);
@@ -136,18 +136,18 @@ function render(s) {
   $("best").textContent = fmtLap(p.bestLapMs);
   $("gap").textContent = p.position > 1 ? fmtGap(p.gapAheadMs) : "–";
   $("leader").textContent = p.position > 1 ? fmtGap(p.gapLeaderMs) : "–";
-  $("pen").textContent = `${p.penaltiesSec} mp, ${p.warnings} db`;
+  $("pen").textContent = `${p.penaltiesSec} s, ${p.warnings}`;
 
   // tyres: arrays are RL, RR, FL, FR
   const comp = $("compound");
   comp.textContent = COMPOUND_HU[p.compound] || p.compound || "–";
   comp.style.setProperty("--c", COMPOUND[p.compound] || "var(--line)");
-  $("tyre-age").textContent = p.tyreAge ? `${p.tyreAge} kör` : "új";
+  $("tyre-age").textContent = p.tyreAge ? `${p.tyreAge} laps` : "new";
   for (let i = 0; i < 4; i++) {
     const el = $(`t${i}`);
     const surf = p.tyreSurface[i], inner = p.tyreInner[i];
     el.style.setProperty("--t", surf < 80 ? "var(--cold)" : surf > 105 ? "var(--hot)" : "var(--thr)");
-    el.innerHTML = `<span class="where">${["Bal hátsó", "Jobb hátsó", "Bal első", "Jobb első"][i]}</span><div class="temp">${surf}<small> / ${inner}</small></div>
+    el.innerHTML = `<span class="where">${["Rear left", "Rear right", "Front left", "Front right"][i]}</span><div class="temp">${surf}<small> / ${inner}</small></div>
       <div class="meta"><span class="wear">${(p.tyreWear?.[i] ?? 0).toFixed(1)}%</span><span>${p.brakeTemp[i]} °C</span></div>`;
   }
 
@@ -155,20 +155,20 @@ function render(s) {
   $("ers").textContent = `${p.ersStoreMJ.toFixed(2)} MJ`;
   $("ers-mode").textContent = ERS_HU[p.ersMode] || p.ersMode;
   $("ers-bar").style.width = `${Math.min(100, (p.ersStoreMJ / ERS_MAX_MJ) * 100)}%`;
-  $("ers-lap").textContent = `Ebben a körben: ${p.ersDeployedMJ.toFixed(2)} MJ leadva, ${p.ersHarvestedMJ.toFixed(2)} MJ visszanyerve`;
+  $("ers-lap").textContent = `This lap: ${p.ersDeployedMJ.toFixed(2)} MJ deployed, ${p.ersHarvestedMJ.toFixed(2)} MJ harvested`;
   $("fuel").textContent = `${p.fuel.toFixed(2)} kg`;
   const fl = p.fuelLaps;
-  $("fuel-laps").textContent = `${fl >= 0 ? "+" : ""}${fl.toFixed(2)} kör`;
+  $("fuel-laps").textContent = `${fl >= 0 ? "+" : ""}${fl.toFixed(2)} laps`;
   $("fuel-laps").style.color = fl < 0 ? "var(--brk)" : "";
-  $("fuel-mix").textContent = `Keverék: ${["lean", "standard", "rich", "max"][p.fuelMix] ?? "–"}`;
+  $("fuel-mix").textContent = `Fuel mix: ${["lean", "standard", "rich", "max"][p.fuelMix] ?? "–"}`;
   $("f-aero").className = p.aeroStraight ? "on" : p.aeroAvailable ? "ready" : "";
-  $("f-aero").textContent = p.aeroStraight ? "Aero: egyenes mód" : "Aero: kanyar mód";
+  $("f-aero").textContent = p.aeroStraight ? "Aero: straight mode" : "Aero: corner mode";
   $("f-ot").className = p.overtakeActive ? "on" : p.overtakeAvailable ? "ready" : "";
   $("f-drs").className = p.drs ? "on" : "";
   const dmg = Object.entries(p.damage || {}).filter(([, v]) => v > 0);
   $("damage").innerHTML = dmg.length
     ? dmg.map(([k, v]) => `<div><dt>${DAMAGE_HU[k] || k}</dt><dd>${v}%</dd></div>`).join("")
-    : `<div><dt>Sérülés</dt><dd>nincs</dd></div>`;
+    : `<div><dt>Damage</dt><dd>none</dd></div>`;
 
   renderCars(s.cars);
   renderEvents(s.events);
@@ -200,8 +200,8 @@ function renderCars(cars) {
       <td>${c.position === 1 ? "–" : fmtGap(c.intervalMs)}</td>
       <td>${fmtLap(c.lastLapMs)}</td>
       <td class="${c.bestLapMs && c.bestLapMs === fastest ? "purple" : ""}">${fmtLap(c.bestLapMs)}</td>
-      <td><span class="dot" style="--c:${COMPOUND[c.compound] || "var(--line)"}"></span>${c.tyreAge} kör</td>
-      <td class="${c.pitStatus ? "pit" : ""}">${c.pitStatus ? "boxban" : c.pits}</td>
+      <td><span class="dot" style="--c:${COMPOUND[c.compound] || "var(--line)"}"></span>${c.tyreAge} laps</td>
+      <td class="${c.pitStatus ? "pit" : ""}">${c.pitStatus ? "in pits" : c.pits}</td>
       <td>${ERS_HU[c.ersMode] || "–"}</td>
     </tr>`).join("");
 }
@@ -210,7 +210,7 @@ function renderEvents(events) {
   const list = [...events].reverse();
   $("events").innerHTML = list.length
     ? list.map((e) => `<li class="${["PENA", "COLL", "SCAR", "RDFL"].includes(e.code) ? "hot" : ""}"><time>${fmtClock(e.t)}</time>${escapeHtml(e.text)}</li>`).join("")
-    : `<li>Még nem történt semmi ebben a sessionben.</li>`;
+    : `<li>Nothing has happened in this session yet.</li>`;
 }
 const fmtClock = (t) => {
   const m = Math.floor(t / 60), s = Math.floor(t % 60);

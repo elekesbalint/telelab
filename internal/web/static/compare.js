@@ -13,7 +13,7 @@ const col = (v) => css.getPropertyValue(v).trim();
 const COLOR_A = col("--amber"), COLOR_B = col("--cold");
 const STEP = 4; // metres between aligned samples
 
-if (!refA) { $("charts").innerHTML = `<p class="lead">Hiányzik az összehasonlítandó kör. Válassz egyet a <a href="/sessions.html">Sessionök</a> oldalon.</p>`; throw new Error("no lap"); }
+if (!refA) { $("charts").innerHTML = `<p class="lead">No lap to compare. Pick one on the <a href="/sessions.html">Sessions</a> page.</p>`; throw new Error("no lap"); }
 $("back").href = `/session.html?id=${refA.sid}`;
 
 const load = async (ref) => {
@@ -37,7 +37,7 @@ function render() {
   plots = [];
   $("charts").innerHTML = "";
   if (!A?.dist?.length) {
-    $("charts").innerHTML = `<p class="lead">Ehhez a körhöz nincs mentett telemetria. Telemetria csak a saját autódról van, a TeleLab telepítése utáni körökből.</p>`;
+    $("charts").innerHTML = `<p class="lead">This lap has no recorded telemetry. Telemetry exists only for your own car, from laps driven since TeleLab was set up.</p>`;
     $("verdict").innerHTML = "";
     return;
   }
@@ -49,7 +49,7 @@ function render() {
 
 function card(el, L, label, changeable) {
   if (!L) {
-    el.innerHTML = `<h2><span class="tag">${label}</span> Nincs kiválasztva</h2>${changeable ? picker() : ""}`;
+    el.innerHTML = `<h2><span class="tag">${label}</span> Nothing selected</h2>${changeable ? picker() : ""}`;
     if (changeable) wirePicker(el);
     return;
   }
@@ -57,16 +57,16 @@ function card(el, L, label, changeable) {
   el.innerHTML = `
     <h2><span class="tag">${label}</span> ${escapeHtml(L.driver || s.player || "?")}</h2>
     <p class="big">${fmtLap(L.lapTimeMs)}</p>
-    <p class="meta">${escapeHtml(s.track || L.track || "")}, ${escapeHtml(s.type || "")}, ${L.lap}. kör, ${s.startedAt ? fmtDate(s.startedAt) : ""}${L.valid ? "" : ", érvénytelen"}</p>
+    <p class="meta">${escapeHtml(s.track || L.track || "")}, ${escapeHtml(s.type || "")}, lap ${L.lap}, ${s.startedAt ? fmtDate(s.startedAt) : ""}${L.valid ? "" : ", invalid"}</p>
     ${changeable ? picker() : ""}`;
   if (changeable) wirePicker(el);
 }
 
 function picker() {
-  return `<details class="pick"><summary>Másik kör választása</summary>
-    <label>Session <select class="p-ses"><option>Betöltés…</option></select></label>
-    <label>Kör <select class="p-lap"></select></label>
-    <button class="primary p-go">Betöltés</button></details>`;
+  return `<details class="pick"><summary>Pick another lap</summary>
+    <label>Session <select class="p-ses"><option>Loading…</option></select></label>
+    <label>Lap <select class="p-lap"></select></label>
+    <button class="primary p-go">Load</button></details>`;
 }
 
 function wirePicker(el) {
@@ -77,11 +77,11 @@ function wirePicker(el) {
     const track = A?.session?.trackId;
     const list = await (await fetch(`/api/sessions?limit=200${track != null ? `&track=${track}` : ""}`)).json();
     const sesSel = el.querySelector(".p-ses"), lapSel = el.querySelector(".p-lap");
-    sesSel.innerHTML = list.filter((s) => s.hasSamples).map((s) => `<option value="${s.id}">${escapeHtml(s.player)}, ${escapeHtml(s.type)}, ${fmtDate(s.startedAt)} (legjobb ${fmtLap(s.bestLapMs)})</option>`).join("");
+    sesSel.innerHTML = list.filter((s) => s.hasSamples).map((s) => `<option value="${s.id}">${escapeHtml(s.player)}, ${escapeHtml(s.type)}, ${fmtDate(s.startedAt)} (best ${fmtLap(s.bestLapMs)})</option>`).join("");
     const fillLaps = async () => {
       const laps = (await (await fetch(`/api/sessions/${sesSel.value}/laps`)).json()).filter((l) => l.isPlayer);
       lapSel.innerHTML = laps.sort((a, b) => a.lapTimeMs - b.lapTimeMs)
-        .map((l) => `<option value="${l.lapNum}">${l.lapNum}. kör, ${fmtLap(l.lapTimeMs)}${l.valid ? "" : " (érvénytelen)"}</option>`).join("");
+        .map((l) => `<option value="${l.lapNum}">Lap ${l.lapNum}, ${fmtLap(l.lapTimeMs)}${l.valid ? "" : " (invalid)"}</option>`).join("");
     };
     sesSel.addEventListener("change", fillLaps);
     if (sesSel.value) await fillLaps();
@@ -144,7 +144,7 @@ function align(LA, LB) {
 // ---------- verdict ----------
 function verdict(al) {
   const el = $("verdict");
-  if (!al.b) { el.innerHTML = `<h2>Egy kör</h2><p class="meta">Válassz B-kört az összehasonlításhoz.</p>`; return; }
+  if (!al.b) { el.innerHTML = `<h2>Single lap</h2><p class="meta">Pick a B lap to compare.</p>`; return; }
   const diff = B.lapTimeMs - A.lapTimeMs;
   // biggest single gain/loss over 200 m windows
   const w = Math.round(200 / STEP);
@@ -156,12 +156,12 @@ function verdict(al) {
   }
   const where = (i) => `${Math.round(al.d[i - w])}–${Math.round(al.d[i])} m`;
   el.innerHTML = `
-    <h2>${diff === 0 ? "Döntetlen" : diff > 0 ? "A a gyorsabb" : "B a gyorsabb"}</h2>
+    <h2>${diff === 0 ? "Dead heat" : diff > 0 ? "A is faster" : "B is faster"}</h2>
     <p class="big ${diff > 0 ? "ka" : "kb"}">${fmtDelta(Math.abs(diff))}</p>
     <dl class="kv">
-      ${worst.v > 0.02 ? `<div><dt>B legtöbb vesztesége</dt><dd>${fmtDelta(worst.v * 1000)} (${where(worst.i)})</dd></div>` : ""}
-      ${best.v < -0.02 ? `<div><dt>B legtöbb nyeresége</dt><dd>${fmtDelta(best.v * 1000)} (${where(best.i)})</dd></div>` : ""}
-      <div><dt>Végsebesség A / B</dt><dd>${Math.max(...al.a.speed).toFixed(0)} / ${Math.max(...al.b.speed).toFixed(0)} km/h</dd></div>
+      ${worst.v > 0.02 ? `<div><dt>B's biggest loss</dt><dd>${fmtDelta(worst.v * 1000)} (${where(worst.i)})</dd></div>` : ""}
+      ${best.v < -0.02 ? `<div><dt>B's biggest gain</dt><dd>${fmtDelta(best.v * 1000)} (${where(best.i)})</dd></div>` : ""}
+      <div><dt>Top speed A / B</dt><dd>${Math.max(...al.a.speed).toFixed(0)} / ${Math.max(...al.b.speed).toFixed(0)} km/h</dd></div>
     </dl>`;
 }
 
@@ -170,13 +170,13 @@ function charts(al) {
   const host = $("charts");
   const sync = uPlot.sync("cmp");
   const defs = [
-    al.delta && { title: "Időkülönbség, B − A (mp)", h: 150, a: null, b: al.delta, fmt: (v) => fmtDelta(v * 1000), axis: (v) => (v > 0 ? "+" : "") + v.toFixed(2), zero: true },
-    { title: "Sebesség (km/h)", h: 200, a: al.a.speed, b: al.b?.speed, fmt: (v) => `${v.toFixed(0)} km/h` },
-    { title: "Gáz (%)", h: 110, a: al.a.throttle.map((v) => v * 100), b: al.b?.throttle.map((v) => v * 100), fmt: (v) => `${v.toFixed(0)}%`, range: [0, 100] },
-    { title: "Fék (%)", h: 110, a: al.a.brake.map((v) => v * 100), b: al.b?.brake.map((v) => v * 100), fmt: (v) => `${v.toFixed(0)}%`, range: [0, 100] },
-    { title: "Fokozat", h: 110, a: al.a.gear, b: al.b?.gear, fmt: (v) => String(Math.round(v)), stepped: true, incrs: [1, 2] },
-    { title: "Kormány (bal −1, jobb +1)", h: 110, a: al.a.steer, b: al.b?.steer, fmt: (v) => v.toFixed(2), axis: (v) => v.toFixed(1), range: [-1, 1] },
-    { title: "ERS töltöttség (MJ)", h: 110, a: al.a.ers, b: al.b?.ers, fmt: (v) => `${v.toFixed(2)} MJ`, axis: (v) => v.toFixed(1) },
+    al.delta && { title: "Time delta, B − A (s)", h: 150, a: null, b: al.delta, fmt: (v) => fmtDelta(v * 1000), axis: (v) => (v > 0 ? "+" : "") + v.toFixed(2), zero: true },
+    { title: "Speed (km/h)", h: 200, a: al.a.speed, b: al.b?.speed, fmt: (v) => `${v.toFixed(0)} km/h` },
+    { title: "Throttle (%)", h: 110, a: al.a.throttle.map((v) => v * 100), b: al.b?.throttle.map((v) => v * 100), fmt: (v) => `${v.toFixed(0)}%`, range: [0, 100] },
+    { title: "Brake (%)", h: 110, a: al.a.brake.map((v) => v * 100), b: al.b?.brake.map((v) => v * 100), fmt: (v) => `${v.toFixed(0)}%`, range: [0, 100] },
+    { title: "Gear", h: 110, a: al.a.gear, b: al.b?.gear, fmt: (v) => String(Math.round(v)), stepped: true, incrs: [1, 2] },
+    { title: "Steering (left −1, right +1)", h: 110, a: al.a.steer, b: al.b?.steer, fmt: (v) => v.toFixed(2), axis: (v) => v.toFixed(1), range: [-1, 1] },
+    { title: "ERS store (MJ)", h: 110, a: al.a.ers, b: al.b?.ers, fmt: (v) => `${v.toFixed(2)} MJ`, axis: (v) => v.toFixed(1) },
   ].filter(Boolean);
 
   const readout = $("readout");
@@ -217,7 +217,7 @@ function charts(al) {
           valEl.innerHTML = parts.join(" ");
           if (def === defs[0]) {
             drawMap(al, i);
-            readout.innerHTML = `<div><dt>Pozíció a körön</dt><dd>${Math.round(al.d[i])} m</dd></div>`;
+            readout.innerHTML = `<div><dt>Distance into the lap</dt><dd>${Math.round(al.d[i])} m</dd></div>`;
           }
         }],
         draw: def.zero ? [(u) => {
@@ -244,7 +244,7 @@ function drawMap(al, cursorIdx) {
   ctx.clearRect(0, 0, w, h);
   const ok = al.a.x.map((x, i) => x !== 0 || al.a.z[i] !== 0);
   const xs = al.a.x, zs = al.a.z;
-  if (!ok.some(Boolean)) { ctx.fillStyle = col("--dim"); ctx.fillText("Nincs pozícióadat", 12, 20); return; }
+  if (!ok.some(Boolean)) { ctx.fillStyle = col("--dim"); ctx.fillText("No position data", 12, 20); return; }
   const vx = xs.filter((_, i) => ok[i]), vz = zs.filter((_, i) => ok[i]);
   const minX = Math.min(...vx), maxX = Math.max(...vx), minZ = Math.min(...vz), maxZ = Math.max(...vz);
   const pad = 16, s = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxZ - minZ || 1));

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="hu">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Csatlakozás · TeleLab</title>
+<title>Connect · TeleLab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,23 +12,23 @@
 <body>
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <nav class="nav" aria-label="Fő menü">
-    <a href="/">Élő</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  <nav class="nav" aria-label="Main menu">
+    <a href="/">Live</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessions</a><a href="/connect.html">Connect</a><a href="/team.html">Team</a>
   </nav>
   <span class="session"></span>
   <div class="userbox" id="me"></div>
 </header>
 <main class="page">
-  <h1>Játék csatlakoztatása</h1>
-  <p class="lead" id="lead">Ezeket az értékeket írd be az F1 26-ban: Game Options, Settings, Telemetry Settings.</p>
+  <h1>Connect your game</h1>
+  <p class="lead" id="lead">Enter these values in F1 26 under Game Options, Settings, Telemetry Settings.</p>
 
   <div class="port-hero">
-    <section class="panel"><span>UDP IP-cím</span><b id="ip">–</b></section>
-    <section class="panel"><span>A te portod</span><b id="port">–</b></section>
+    <section class="panel"><span>UDP IP address</span><b id="ip">–</b></section>
+    <section class="panel"><span>Your port</span><b id="port">–</b></section>
   </div>
 
   <section class="panel">
-    <h2>Beállítások a játékban</h2>
+    <h2>In-game settings</h2>
     <table class="settings">
       <tbody>
         <tr><td>UDP Telemetry</td><td>On</td></tr>
@@ -37,16 +37,16 @@
         <tr><td>UDP Port</td><td id="port2">–</td></tr>
         <tr><td>UDP Send Rate</td><td>60 Hz</td></tr>
         <tr><td>UDP Format</td><td>2026</td></tr>
-        <tr><td>Your Telemetry</td><td>Public (online versenyen a csapattársak is látják a részletes adataidat)</td></tr>
+        <tr><td>Your Telemetry</td><td>Public (in online races your teammates can see your detailed data)</td></tr>
       </tbody>
     </table>
   </section>
 
   <section class="panel" style="margin-top:16px">
-    <h2>A csapat portjai</h2>
+    <h2>Team ports</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Pilóta</th><th>Port</th><th>Állapot</th></tr></thead>
+        <thead><tr><th>Driver</th><th>Port</th><th>Status</th></tr></thead>
         <tbody id="ports"></tbody>
       </table>
     </div>
@@ -58,18 +58,18 @@
   if (me) {
     const ip = me.publicIp || location.hostname;
     for (const id of ["ip", "ip2"]) document.getElementById(id).textContent = ip;
-    const port = me.udpPort ?? "nincs kiosztva";
+    const port = me.udpPort ?? "not assigned";
     for (const id of ["port", "port2"]) document.getElementById(id).textContent = port;
     if (me.udpPort == null) document.getElementById("lead").textContent =
-      "Még nincs saját portod. Szólj a csapattulajdonosnak, hogy osszon ki egyet a Csapat oldalon.";
+      "You have no port yet. Ask the team owner to assign one on the Team page.";
   }
   async function refresh() {
     const feeds = await (await fetch("/api/feeds")).json();
     feeds.sort((a, b) => a.port - b.port);
     document.getElementById("ports").innerHTML = feeds.filter((f) => f.owner || f.active).map((f) => `
-      <tr><td class="name">${escapeHtml(f.owner || f.player || "nincs kiosztva")}</td><td>${f.port}</td>
-      <td><span class="status ${f.active ? "live" : ""}">${f.active ? `adatot küld${f.track ? `, ${escapeHtml(f.track)}` : ""}` : "nem küld adatot"}</span></td></tr>`).join("")
-      || `<tr><td colspan="3">Még senkinek nincs portja.</td></tr>`;
+      <tr><td class="name">${escapeHtml(f.owner || f.player || "not assigned")}</td><td>${f.port}</td>
+      <td><span class="status ${f.active ? "live" : ""}">${f.active ? `sending data${f.track ? `, ${escapeHtml(f.track)}` : ""}` : "not sending"}</span></td></tr>`).join("")
+      || `<tr><td colspan="3">Nobody has a port yet.</td></tr>`;
   }
   refresh();
   setInterval(refresh, 5000);

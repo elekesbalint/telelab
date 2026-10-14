@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="hu">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,41 +13,41 @@
 <body>
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <nav class="nav" aria-label="Fő menü">
-    <a href="/">Élő</a><a href="/workbench.html">Workbench</a><a href="/sessions.html" aria-current="page">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  <nav class="nav" aria-label="Main menu">
+    <a href="/">Live</a><a href="/workbench.html">Workbench</a><a href="/sessions.html" aria-current="page">Sessions</a><a href="/connect.html">Connect</a><a href="/team.html">Team</a>
   </nav>
   <span class="session"></span>
   <div class="userbox" id="me"></div>
 </header>
 <main class="page">
-  <p class="back"><a href="/sessions.html">Összes session</a></p>
+  <p class="back"><a href="/sessions.html">All sessions</a></p>
   <h1 id="title">Session</h1>
   <p class="lead" id="lead"></p>
 
   <section class="panel">
-    <h2>Köridők</h2>
+    <h2>Lap times</h2>
     <div id="chart" class="chart"></div>
   </section>
 
   <section class="panel" style="margin-top:16px">
     <div class="panel-head">
-      <h2>Körök</h2>
-      <button class="primary" id="compare" disabled>Kijelölt körök összehasonlítása</button>
+      <h2>Laps</h2>
+      <button class="primary" id="compare" disabled>Compare selected laps</button>
     </div>
-    <p class="hint" id="pick-hint">Jelölj ki egy kört A-nak és egyet B-nek. A B-kört másik sessionből is kiválaszthatod az összehasonlító oldalon.</p>
+    <p class="hint" id="pick-hint">Pick one lap as A and one as B. On the comparison page you can also pick B from another session.</p>
     <div class="table-wrap">
       <table class="laps">
-        <thead><tr><th>A</th><th>B</th><th>Kör</th><th>Köridő</th><th>S1</th><th>S2</th><th>S3</th><th>Gumi</th><th></th></tr></thead>
+        <thead><tr><th>A</th><th>B</th><th>Lap</th><th>Lap time</th><th>S1</th><th>S2</th><th>S3</th><th>Tyre</th><th></th></tr></thead>
         <tbody id="laps"></tbody>
       </table>
     </div>
   </section>
 
   <section class="panel" style="margin-top:16px">
-    <h2>Mezőny legjobb körei</h2>
+    <h2>Best laps of the field</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>#</th><th>Pilóta</th><th>Legjobb kör</th><th>Különbség</th><th>Körök</th></tr></thead>
+        <thead><tr><th>#</th><th>Driver</th><th>Best lap</th><th>Gap</th><th>Laps</th></tr></thead>
         <tbody id="field"></tbody>
       </table>
     </div>
@@ -64,10 +64,10 @@
     fetch(`/api/sessions/${id}`).then((r) => (r.ok ? r.json() : null)),
     fetch(`/api/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : [])),
   ]);
-  if (!ses) { $("title").textContent = "Ez a session nem található"; throw new Error("not found"); }
+  if (!ses) { $("title").textContent = "Session not found"; throw new Error("not found"); }
   document.title = `${ses.player} – ${ses.track} · TeleLab`;
   $("title").textContent = `${ses.player || "?"}, ${ses.track}`;
-  $("lead").textContent = `${ses.type}, ${fmtDate(ses.startedAt)}${ses.online ? ", online" : ""}. Legjobb érvényes kör: ${fmtLap(ses.bestLapMs)}.`;
+  $("lead").textContent = `${ses.type}, ${fmtDate(ses.startedAt)}${ses.online ? ", online" : ""}. Best valid lap: ${fmtLap(ses.bestLapMs)}.`;
 
   const mine = laps.filter((l) => l.isPlayer).sort((a, b) => a.lapNum - b.lapNum);
   const best = (k) => Math.min(...mine.filter((l) => l.valid && l[k]).map((l) => l[k]));
@@ -76,16 +76,16 @@
 
   $("laps").innerHTML = mine.map((l) => `
     <tr class="${l.valid ? "" : "invalid"}">
-      <td><input type="radio" name="a" value="${l.lapNum}" aria-label="${l.lapNum}. kör legyen az A"></td>
-      <td><input type="radio" name="b" value="${l.lapNum}" aria-label="${l.lapNum}. kör legyen a B"></td>
+      <td><input type="radio" name="a" value="${l.lapNum}" aria-label="Use lap ${l.lapNum} as A"></td>
+      <td><input type="radio" name="b" value="${l.lapNum}" aria-label="Use lap ${l.lapNum} as B"></td>
       <td>${l.lapNum}</td>
       <td class="${cls(l.lapTimeMs, bestLap)}">${fmtLap(l.lapTimeMs)}</td>
       <td class="${cls(l.s1Ms, b1)}">${fmtLap(l.s1Ms)}</td>
       <td class="${cls(l.s2Ms, b2)}">${fmtLap(l.s2Ms)}</td>
       <td class="${cls(l.s3Ms, b3)}">${fmtLap(l.s3Ms)}</td>
       <td><span class="dot" style="--c:${COMPOUND[l.tyreVisual] || "var(--line)"}"></span>${COMPOUND_NAME[l.tyreVisual] || ""}</td>
-      <td>${l.valid ? "" : "érvénytelen"}</td>
-    </tr>`).join("") || `<tr><td colspan="9">Ebben a sessionben nincs befejezett köröd.</td></tr>`;
+      <td>${l.valid ? "" : "invalid"}</td>
+    </tr>`).join("") || `<tr><td colspan="9">You have no completed laps in this session.</td></tr>`;
 
   // default selection: A = best lap, B = second best
   const ranked = mine.filter((l) => l.valid).sort((a, b) => a.lapTimeMs - b.lapTimeMs);
@@ -94,7 +94,7 @@
   const sync = () => {
     const a = document.querySelector("input[name=a]:checked"), b = document.querySelector("input[name=b]:checked");
     $("compare").disabled = !a;
-    $("compare").textContent = a && b ? `${a.value}. és ${b.value}. kör összehasonlítása` : a ? `${a.value}. kör megnyitása` : "Jelölj ki egy kört";
+    $("compare").textContent = a && b ? `Compare lap ${a.value} and lap ${b.value}` : a ? `Open lap ${a.value}` : "Pick a lap";
   };
   $("laps").addEventListener("change", sync);
   sync();
@@ -117,7 +117,7 @@
   $("field").innerHTML = field.map((c, i) => `
     <tr class="${c.isPlayer ? "me" : ""}"><td>${i + 1}</td><td class="name">${escapeHtml(c.driver || "?")}</td>
     <td class="${i === 0 ? "purple" : ""}">${fmtLap(c.best)}</td><td>${i ? fmtDelta(c.best - field[0].best) : "–"}</td><td>${c.n}</td></tr>`).join("")
-    || `<tr><td colspan="5">Nincs érvényes kör.</td></tr>`;
+    || `<tr><td colspan="5">No valid laps.</td></tr>`;
 
   // lap time chart
   if (mine.length) {
@@ -133,13 +133,13 @@
       cursor: { points: { size: 8 } },
       scales: { x: { time: false } },
       axes: [
-        { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, label: "Kör", labelSize: 20, incrs: [1, 2, 5, 10] },
+        { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, label: "Lap", labelSize: 20, incrs: [1, 2, 5, 10] },
         { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, size: 70, values: (u, v) => v.map((s) => fmtLap(Math.round(s * 1000))) },
       ],
       series: [
         {},
-        { label: "Érvényes", stroke: col("--amber"), width: 2, points: { size: 7, fill: col("--amber") }, spanGaps: true },
-        { label: "Érvénytelen", stroke: "transparent", points: { show: true, size: 7, stroke: col("--dim"), fill: col("--panel") } },
+        { label: "Valid", stroke: col("--amber"), width: 2, points: { size: 7, fill: col("--amber") }, spanGaps: true },
+        { label: "Invalid", stroke: "transparent", points: { show: true, size: 7, stroke: col("--dim"), fill: col("--panel") } },
       ],
     }, [xs, valid, invalid], el);
     new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: 240 })).observe(el);

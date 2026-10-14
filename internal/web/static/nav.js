@@ -1,5 +1,5 @@
 // Shared header: highlights the current page and shows the signed-in user.
-export const ROLE_HU = { owner: "Tulajdonos", engineer: "Mérnök", driver: "Pilóta", pending: "Jóváhagyásra vár" };
+export const ROLE_NAME = { owner: "Owner", engineer: "Engineer", driver: "Driver", pending: "Awaiting approval" };
 
 export async function loadMe() {
   const res = await fetch("/api/me");
@@ -23,7 +23,7 @@ export async function initNav() {
   if (box) {
     const img = avatarUrl(me);
     box.innerHTML = `${img ? `<img src="${img}" alt="">` : ""}<span>${escapeHtml(me.displayName || "")}</span>
-      ${me.devMode ? "" : `<form method="post" action="/auth/logout"><button type="submit">Kilépés</button></form>`}`;
+      ${me.devMode ? "" : `<form method="post" action="/auth/logout"><button type="submit">Log out</button></form>`}`;
   }
   return me;
 }

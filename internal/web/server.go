@@ -201,7 +201,7 @@ func (s *Server) sessionLaps(w http.ResponseWriter, r *http.Request) {
 func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	u, ok := auth.UserFrom(r.Context())
 	if !ok {
-		writeJSON(w, map[string]any{"role": "owner", "displayName": "Fejlesztő", "devMode": true, "publicIp": s.PublicIP})
+		writeJSON(w, map[string]any{"role": "owner", "displayName": "Developer", "devMode": true, "publicIp": s.PublicIP})
 		return
 	}
 	writeJSON(w, map[string]any{"id": u.ID, "displayName": u.Name(), "username": u.Username, "avatar": u.Avatar,
@@ -228,24 +228,24 @@ func (s *Server) updateMember(w http.ResponseWriter, r *http.Request) {
 		UDPPort *int   `json:"udpPort"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || !store.ValidRole(body.Role) {
-		http.Error(w, "hibás kérés", http.StatusBadRequest)
+		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 	if body.UDPPort != nil {
 		if _, ok := s.Feeds[*body.UDPPort]; !ok {
-			http.Error(w, "ez a port nincs a szerver tartományában", http.StatusBadRequest)
+			http.Error(w, "this port is not in the server's range", http.StatusBadRequest)
 			return
 		}
 	}
 	if me, ok := auth.UserFrom(r.Context()); ok && me.ID == id && body.Role != store.RoleOwner {
 		if n, err := s.Store.CountOwners(r.Context()); err == nil && n <= 1 {
-			http.Error(w, "te vagy az egyetlen tulajdonos, a saját szerepköröd nem módosíthatod", http.StatusBadRequest)
+			http.Error(w, "you are the only owner, so you cannot change your own role", http.StatusBadRequest)
 			return
 		}
 	}
 	u, err := s.Store.UpdateUser(r.Context(), id, body.Role, body.UDPPort)
 	if errors.Is(err, store.ErrPortTaken) {
-		http.Error(w, "ez a port már másé", http.StatusConflict)
+		http.Error(w, "this port is already assigned to someone else", http.StatusConflict)
 		return
 	}
 	if err != nil {
@@ -258,7 +258,7 @@ func (s *Server) updateMember(w http.ResponseWriter, r *http.Request) {
 func (s *Server) deleteMember(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if me, ok := auth.UserFrom(r.Context()); ok && me.ID == id {
-		http.Error(w, "saját magadat nem törölheted", http.StatusBadRequest)
+		http.Error(w, "you cannot remove yourself", http.StatusBadRequest)
 		return
 	}
 	if err := s.Store.DeleteUser(r.Context(), id); err != nil {

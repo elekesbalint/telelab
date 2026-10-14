@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="hu">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Belépés · TeleLab</title>
+<title>Sign in · TeleLab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,22 +12,22 @@
 <body class="gate">
 <main class="gate-box">
   <p class="brand">Tele<span>Lab</span></p>
-  <h1>Csapat-telemetria F1 26-hoz</h1>
-  <p class="lead">Lépj be a Discord-fiókoddal. Ha tagja vagy a csapat Discord-szerverének, azonnal bejutsz és kapsz egy saját telemetria-portot.</p>
-  <a class="discord" href="/auth/discord">Belépés Discorddal</a>
+  <h1>Team telemetry for F1 26</h1>
+  <p class="lead">Sign in with your Discord account. If you are a member of the team's Discord server, you get in straight away with your own telemetry port.</p>
+  <a class="discord" href="/auth/discord">Sign in with Discord</a>
   <p class="error" id="error" hidden></p>
   <p class="credit">TeleLab by Bálint Elekes</p>
 </main>
 <script>
   const reasons = {
-    denied: "A belépést a Discordon megszakítottad. Próbáld újra, és engedélyezd a hozzáférést.",
-    state: "A belépés lejárt vagy egy másik ablakban indult. Kattints újra a gombra.",
-    discord: "A Discord nem válaszolt rendesen. Próbáld újra pár másodperc múlva.",
-    db: "A szerver nem tudta elmenteni a belépést. Szólj a csapattulajdonosnak.",
-    code: "Hiányzó belépési kód a Discordtól. Kattints újra a gombra.",
+    denied: "You cancelled the sign-in on Discord. Try again and allow access.",
+    state: "The sign-in expired or started in another window. Click the button again.",
+    discord: "Discord did not respond properly. Try again in a few seconds.",
+    db: "The server could not save your sign-in. Tell the team owner.",
+    code: "Discord sent no sign-in code. Click the button again.",
   };
   const err = new URLSearchParams(location.search).get("error");
-  if (err) { const el = document.getElementById("error"); el.textContent = reasons[err] || "Sikertelen belépés, próbáld újra."; el.hidden = false; }
+  if (err) { const el = document.getElementById("error"); el.textContent = reasons[err] || "Sign-in failed, please try again."; el.hidden = false; }
 </script>
 </body>
 </html>

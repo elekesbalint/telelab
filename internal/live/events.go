@@ -6,7 +6,7 @@ import (
 	"github.com/elekesbalint/telelab/internal/f1udp"
 )
 
-// describe turns an event into a short human-readable line (Hungarian).
+// describe turns an event into a short human-readable line.
 func describe(s *State, e f1udp.Event) string {
 	name := func(i uint8) string {
 		if int(i) >= f1udp.MaxCars {
@@ -19,63 +19,63 @@ func describe(s *State, e f1udp.Event) string {
 	}
 	switch e.Code {
 	case f1udp.EventSessionStarted:
-		return "Session elindult"
+		return "Session started"
 	case f1udp.EventSessionEnded:
-		return "Session véget ért"
+		return "Session ended"
 	case f1udp.EventFastestLap:
-		return fmt.Sprintf("Leggyorsabb kör: %s %s", name(e.VehicleIdx), fmtMS(uint32(e.LapTime*1000)))
+		return fmt.Sprintf("Fastest lap: %s %s", name(e.VehicleIdx), fmtMS(uint32(e.LapTime*1000)))
 	case f1udp.EventRetirement:
-		return fmt.Sprintf("Kiesett: %s", name(e.VehicleIdx))
+		return fmt.Sprintf("Retired: %s", name(e.VehicleIdx))
 	case f1udp.EventDRSEnabled:
-		return "DRS engedélyezve"
+		return "DRS enabled"
 	case f1udp.EventDRSDisabled:
-		return "DRS letiltva"
+		return "DRS disabled"
 	case f1udp.EventTeamMateInPits:
-		return fmt.Sprintf("Csapattárs a boxban: %s", name(e.VehicleIdx))
+		return fmt.Sprintf("Teammate in the pits: %s", name(e.VehicleIdx))
 	case f1udp.EventChequeredFlag:
-		return "Kockás zászló"
+		return "Chequered flag"
 	case f1udp.EventRaceWinner:
-		return fmt.Sprintf("Győztes: %s", name(e.VehicleIdx))
+		return fmt.Sprintf("Race winner: %s", name(e.VehicleIdx))
 	case f1udp.EventPenalty:
-		pt, ok := penaltyTypesHU[e.PenaltyType]
+		pt, ok := penaltyTypes[e.PenaltyType]
 		if !ok {
-			pt = fmt.Sprintf("büntetés #%d", e.PenaltyType)
+			pt = fmt.Sprintf("penalty #%d", e.PenaltyType)
 		}
-		inf, ok := infringementsHU[e.InfringementType]
+		inf, ok := infringements[e.InfringementType]
 		if !ok {
-			inf = fmt.Sprintf("szabálysértés #%d", e.InfringementType)
+			inf = fmt.Sprintf("infringement #%d", e.InfringementType)
 		}
 		txt := fmt.Sprintf("%s: %s – %s", name(e.VehicleIdx), pt, inf)
 		if e.Time > 0 && e.Time < 255 {
-			txt += fmt.Sprintf(", %d mp", e.Time)
+			txt += fmt.Sprintf(", %d s", e.Time)
 		}
 		if e.LapNum > 0 && e.LapNum < 255 {
-			txt += fmt.Sprintf(", %d. kör", e.LapNum)
+			txt += fmt.Sprintf(", lap %d", e.LapNum)
 		}
 		return txt
 	case f1udp.EventSpeedTrap:
-		return fmt.Sprintf("Sebességmérés: %s %.1f km/h", name(e.VehicleIdx), e.Speed)
+		return fmt.Sprintf("Speed trap: %s %.1f km/h", name(e.VehicleIdx), e.Speed)
 	case f1udp.EventStartLights:
-		return fmt.Sprintf("Rajtlámpák: %d", e.NumLights)
+		return fmt.Sprintf("Start lights: %d", e.NumLights)
 	case f1udp.EventLightsOut:
-		return "Lámpák kialudtak"
+		return "Lights out"
 	case f1udp.EventDriveThroughDone:
-		return fmt.Sprintf("Áthajtásos büntetés letöltve: %s", name(e.VehicleIdx))
+		return fmt.Sprintf("Drive through served: %s", name(e.VehicleIdx))
 	case f1udp.EventStopGoDone:
-		return fmt.Sprintf("Stop-go letöltve: %s (%.1f s)", name(e.VehicleIdx), e.StopTime)
+		return fmt.Sprintf("Stop go served: %s (%.1f s)", name(e.VehicleIdx), e.StopTime)
 	case f1udp.EventFlashback:
 		return "Flashback"
 	case f1udp.EventRedFlag:
-		return "Piros zászló"
+		return "Red flag"
 	case f1udp.EventOvertake:
-		return fmt.Sprintf("Előzés: %s → %s", name(e.VehicleIdx), name(e.OtherVehicleIdx))
+		return fmt.Sprintf("Overtake: %s passed %s", name(e.VehicleIdx), name(e.OtherVehicleIdx))
 	case f1udp.EventSafetyCar:
-		kinds := map[uint8]string{1: "Safety car", 2: "Virtuális SC", 3: "Felvezető kör SC"}
-		phases := map[uint8]string{0: "kiküldve", 1: "visszatér", 2: "visszatért", 3: "verseny folytatódik"}
+		kinds := map[uint8]string{1: "Safety car", 2: "Virtual safety car", 3: "Formation lap safety car"}
+		phases := map[uint8]string{0: "deployed", 1: "returning", 2: "returned", 3: "race resumes"}
 		return fmt.Sprintf("%s %s", kinds[e.SafetyCarType], phases[e.SafetyCarEventType])
 	case f1udp.EventCollision:
-		sev := map[uint8]string{0: "kis", 1: "közepes", 2: "nagy"}[e.Severity]
-		return fmt.Sprintf("Ütközés (%s): %s és %s", sev, name(e.VehicleIdx), name(e.OtherVehicleIdx))
+		sev := map[uint8]string{0: "minor", 1: "medium", 2: "major"}[e.Severity]
+		return fmt.Sprintf("Collision (%s): %s and %s", sev, name(e.VehicleIdx), name(e.OtherVehicleIdx))
 	}
 	return e.Code
 }

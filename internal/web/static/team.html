@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="hu">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Csapat · TeleLab</title>
+<title>Team · TeleLab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,32 +12,32 @@
 <body>
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <nav class="nav" aria-label="Fő menü">
-    <a href="/">Élő</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  <nav class="nav" aria-label="Main menu">
+    <a href="/">Live</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessions</a><a href="/connect.html">Connect</a><a href="/team.html">Team</a>
   </nav>
   <span class="session"></span>
   <div class="userbox" id="me"></div>
 </header>
 <main class="page">
-  <h1>Csapat</h1>
-  <p class="lead" id="lead">A csapat tagjai, szerepkörei és telemetria-portjai.</p>
+  <h1>Team</h1>
+  <p class="lead" id="lead">Team members, their roles and telemetry ports.</p>
   <p class="notice" id="notice" role="status"></p>
   <section class="panel team">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Tag</th><th>Szerepkör</th><th>Port</th><th>Utolsó belépés</th><th></th></tr></thead>
+        <thead><tr><th>Member</th><th>Role</th><th>Port</th><th>Last sign-in</th><th></th></tr></thead>
         <tbody id="members"></tbody>
       </table>
     </div>
   </section>
 </main>
 <script type="module">
-  import { initNav, escapeHtml, avatarUrl, ROLE_HU } from "./nav.js";
+  import { initNav, escapeHtml, avatarUrl, ROLE_NAME } from "./nav.js";
   const me = await initNav();
   const owner = me?.role === "owner";
   let ports = [];
   if (owner) document.getElementById("lead").textContent =
-    "Tulajdonosként itt hagyod jóvá az új tagokat, állítod a szerepköröket és osztod ki a portokat. A változás azonnal érvényes.";
+    "As the owner you approve new members, set roles and assign ports here. Changes apply immediately.";
 
   const notice = (t) => { const n = document.getElementById("notice"); n.textContent = t; if (t) setTimeout(() => n.textContent === t && (n.textContent = ""), 5000); };
 
@@ -51,14 +51,14 @@
     const img = avatarUrl(u);
     const name = u.displayName || u.username;
     const who = `<div class="who">${img ? `<img src="${img}" alt="">` : "<i></i>"}<div>${escapeHtml(name)}<small>@${escapeHtml(u.username)}</small></div></div>`;
-    const last = new Date(u.lastLogin).toLocaleString("hu-HU", { dateStyle: "short", timeStyle: "short" });
-    if (!owner) return `<tr><td>${who}</td><td>${ROLE_HU[u.role]}</td><td>${u.udpPort ?? "–"}</td><td>${last}</td><td></td></tr>`;
+    const last = new Date(u.lastLogin).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
+    if (!owner) return `<tr><td>${who}</td><td>${ROLE_NAME[u.role]}</td><td>${u.udpPort ?? "–"}</td><td>${last}</td><td></td></tr>`;
     const taken = new Set(users.filter((x) => x.id !== u.id && x.udpPort != null).map((x) => x.udpPort));
-    const roleSel = `<select data-id="${u.id}" data-field="role" aria-label="Szerepkör: ${escapeHtml(name)}">${
-      Object.entries(ROLE_HU).map(([k, v]) => `<option value="${k}" ${k === u.role ? "selected" : ""}>${v}</option>`).join("")}</select>`;
-    const portSel = `<select data-id="${u.id}" data-field="udpPort" aria-label="Port: ${escapeHtml(name)}"><option value="">nincs</option>${
+    const roleSel = `<select data-id="${u.id}" data-field="role" aria-label="Role: ${escapeHtml(name)}">${
+      Object.entries(ROLE_NAME).map(([k, v]) => `<option value="${k}" ${k === u.role ? "selected" : ""}>${v}</option>`).join("")}</select>`;
+    const portSel = `<select data-id="${u.id}" data-field="udpPort" aria-label="Port: ${escapeHtml(name)}"><option value="">none</option>${
       ports.map((p) => `<option value="${p}" ${p === u.udpPort ? "selected" : ""} ${taken.has(p) ? "disabled" : ""}>${p}</option>`).join("")}</select>`;
-    const del = u.id === me.id ? "" : `<button class="btn" data-del="${u.id}">Eltávolítás</button>`;
+    const del = u.id === me.id ? "" : `<button class="btn" data-del="${u.id}">Remove</button>`;
     return `<tr data-row="${u.id}"><td>${who}</td><td>${roleSel}</td><td>${portSel}</td><td>${last}</td><td>${del}</td></tr>`;
   }
 
@@ -72,7 +72,7 @@
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, udpPort: p === "" ? null : Number(p) }),
     });
-    notice(res.ok ? "Mentve." : `Nem sikerült: ${(await res.text()).trim()}`);
+    notice(res.ok ? "Saved." : `Could not save: ${(await res.text()).trim()}`);
     load();
   });
 
@@ -80,9 +80,9 @@
     const id = e.target.dataset?.del;
     if (!id) return;
     const name = e.target.closest("tr").querySelector(".who div").firstChild.textContent;
-    if (!confirm(`Biztosan eltávolítod: ${name}? Újra beléphet, ha tagja a csapat Discord-szerverének.`)) return;
+    if (!confirm(`Remove ${name}? They can sign in again if they are on the team's Discord server.`)) return;
     const res = await fetch(`/api/team/${id}`, { method: "DELETE" });
-    notice(res.ok ? `${name} eltávolítva.` : `Nem sikerült: ${(await res.text()).trim()}`);
+    notice(res.ok ? `${name} removed.` : `Could not save: ${(await res.text()).trim()}`);
     load();
   });
 

@@ -51,8 +51,8 @@ async function loadViews(selectKey) {
     ...saved.map((v) => ({ id: v.id, key: `v${v.id}`, name: v.name, layout: v.layout, author: v.author })),
   ];
   const sel = $("view");
-  sel.innerHTML = `<optgroup label="Beépített">${views.filter((v) => v.builtin).map((v) => `<option value="${v.key}">${esc(v.name)}</option>`).join("")}</optgroup>` +
-    (saved.length ? `<optgroup label="Csapat nézetei">${views.filter((v) => !v.builtin).map((v) => `<option value="${v.key}">${esc(v.name)}${v.author ? `, ${esc(v.author)}` : ""}</option>`).join("")}</optgroup>` : "");
+  sel.innerHTML = `<optgroup label="Built-in">${views.filter((v) => v.builtin).map((v) => `<option value="${v.key}">${esc(v.name)}</option>`).join("")}</optgroup>` +
+    (saved.length ? `<optgroup label="Team views">${views.filter((v) => !v.builtin).map((v) => `<option value="${v.key}">${esc(v.name)}${v.author ? `, ${esc(v.author)}` : ""}</option>`).join("")}</optgroup>` : "");
   const key = selectKey || store.get("view", "b0");
   showView(views.find((v) => v.key === key) || views[0]);
 }
@@ -69,14 +69,14 @@ function showView(v) {
 
 function updateButtons() {
   $("save").disabled = !dirty || current.builtin;
-  $("save").title = current.builtin ? "A beépített nézet nem írható felül, mentsd újként" : "";
+  $("save").title = current.builtin ? "Built-in views cannot be overwritten; save as a new view" : "";
   $("delete-view").hidden = current.builtin;
-  $("save").textContent = dirty ? "Mentés*" : "Mentés";
+  $("save").textContent = dirty ? "Save*" : "Save";
 }
 const touch = () => { dirty = true; updateButtons(); };
 
 $("view").onchange = () => {
-  if (dirty && !confirm("A nézet nem mentett változásai elvesznek. Folytatod?")) { $("view").value = current.key; return; }
+  if (dirty && !confirm("Unsaved changes to this view will be lost. Continue?")) { $("view").value = current.key; return; }
   showView(views.find((v) => v.key === $("view").value));
 };
 
@@ -84,33 +84,33 @@ $("save").onclick = async () => {
   if (current.builtin) return;
   const res = await fetch(`/api/views/${current.id}`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: current.name, layout: toCompact(layout) }) });
-  if (!res.ok) return alert(`Nem sikerült menteni: ${(await res.text()).trim()}`);
+  if (!res.ok) return alert(`Could not save: ${(await res.text()).trim()}`);
   current.layout = toCompact(layout);
   dirty = false; updateButtons();
 };
 
 $("save-as").onclick = async () => {
-  const name = prompt("Az új nézet neve:", current.builtin ? `${current.name} (saját)` : `${current.name} másolat`);
+  const name = prompt("Name of the new view:", current.builtin ? `${current.name} (mine)` : `${current.name} copy`);
   if (!name) return;
   const res = await fetch("/api/views", { method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, layout: toCompact(layout) }) });
-  if (!res.ok) return alert(`Nem sikerült menteni: ${(await res.text()).trim()}`);
+  if (!res.ok) return alert(`Could not save: ${(await res.text()).trim()}`);
   const { id } = await res.json();
   dirty = false;
   await loadViews(`v${id}`);
 };
 
 $("delete-view").onclick = async () => {
-  if (current.builtin || !confirm(`Biztosan törlöd a(z) „${current.name}” nézetet a csapat elől?`)) return;
+  if (current.builtin || !confirm(`Delete the view "${current.name}" for the whole team?`)) return;
   const res = await fetch(`/api/views/${current.id}`, { method: "DELETE" });
-  if (!res.ok) return alert(`Nem sikerült törölni: ${(await res.text()).trim()}`);
+  if (!res.ok) return alert(`Could not delete: ${(await res.text()).trim()}`);
   dirty = false;
   await loadViews("b0");
 };
 
 $("export").onclick = () => {
   const blob = new Blob([JSON.stringify({ telelabView: 1, name: current.name, layout: toCompact(layout) }, null, 2)], { type: "application/json" });
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `telelab-nezet-${current.name.replace(/[^\p{L}\p{N}]+/gu, "-")}.json` });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `telelab-view-${current.name.replace(/[^\p{L}\p{N}]+/gu, "-")}.json` });
   a.click();
   URL.revokeObjectURL(a.href);
 };
@@ -121,19 +121,19 @@ $("import-file").onchange = async (e) => {
   if (!file) return;
   try {
     const j = JSON.parse(await file.text());
-    if (!Array.isArray(j.layout)) throw new Error("hiányzik a layout");
+    if (!Array.isArray(j.layout)) throw new Error("missing layout");
     layout = fromCompact(j.layout);
-    current = { id: null, key: "import", name: j.name || "Importált nézet", builtin: true, layout: j.layout };
+    current = { id: null, key: "import", name: j.name || "Imported view", builtin: true, layout: j.layout };
     dirty = true; updateButtons(); build();
-    alert("Betöltve. A megtartásához kattints a „Mentés újként” gombra.");
-  } catch (err) { alert(`Ez nem TeleLab nézetfájl (${err.message}).`); }
+    alert("Loaded. To keep it, click \"Save as new\".");
+  } catch (err) { alert(`This is not a TeleLab view file (${err.message}).`); }
 };
 
 // ---------- editing ----------
 $("edit").onclick = () => {
   editing = !editing;
   $("edit").setAttribute("aria-pressed", editing);
-  $("edit").textContent = editing ? "Szerkesztés kész" : "Szerkesztés";
+  $("edit").textContent = editing ? "Done editing" : "Edit";
   document.body.classList.toggle("editing", editing);
   build();
 };
@@ -165,10 +165,10 @@ function build() {
     el.style.gridRow = `span ${p.h}`;
     el.dataset.uid = p.uid;
     el.innerHTML = `<header><h3>${esc(def.title)}</h3>${editing ? `<div class="pctl">
-        <button data-a="w-" aria-label="Keskenyebb" title="Keskenyebb">◂</button><button data-a="w+" aria-label="Szélesebb" title="Szélesebb">▸</button>
-        <button data-a="h-" aria-label="Alacsonyabb" title="Alacsonyabb">▴</button><button data-a="h+" aria-label="Magasabb" title="Magasabb">▾</button>
-        <button data-a="up" aria-label="Előrébb" title="Előrébb">↑</button><button data-a="down" aria-label="Hátrébb" title="Hátrébb">↓</button>
-        <button data-a="x" aria-label="Panel törlése" title="Törlés">✕</button></div>` : ""}</header><div class="wb-body-in"></div>`;
+        <button data-a="w-" aria-label="Narrower" title="Narrower">◂</button><button data-a="w+" aria-label="Wider" title="Wider">▸</button>
+        <button data-a="h-" aria-label="Shorter" title="Shorter">▴</button><button data-a="h+" aria-label="Taller" title="Taller">▾</button>
+        <button data-a="up" aria-label="Move earlier" title="Move earlier">↑</button><button data-a="down" aria-label="Move later" title="Move later">↓</button>
+        <button data-a="x" aria-label="Remove panel" title="Remove">✕</button></div>` : ""}</header><div class="wb-body-in"></div>`;
     if (editing) {
       el.draggable = true;
       el.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", p.uid); el.classList.add("dragging"); });
@@ -201,7 +201,7 @@ function build() {
     grid.append(el);
     panelEls.set(p.uid, el.querySelector(".wb-body-in"));
   }
-  if (!layout.length) grid.innerHTML = `<p class="wb-muted">Ez a nézet üres. Kapcsold be a szerkesztést, és adj hozzá paneleket.</p>`;
+  if (!layout.length) grid.innerHTML = `<p class="wb-muted">This view is empty. Turn on editing and add some panels.</p>`;
   renderAll();
 }
 
@@ -212,7 +212,7 @@ function renderAll() {
     const el = panelEls.get(p.uid);
     if (!el) continue;
     try { PANELS[p.type].render(el, { ...ctx, opts: p.opts }); }
-    catch (err) { el.innerHTML = `<p class="wb-muted">Hiba a panelben: ${esc(err.message)}</p>`; console.error(err); }
+    catch (err) { el.innerHTML = `<p class="wb-muted">Panel error: ${esc(err.message)}</p>`; console.error(err); }
   }
 }
 
@@ -227,7 +227,7 @@ async function loadFeeds() {
   try { feeds = await (await fetch("/api/feeds")).json(); } catch { return; }
   const sel = $("feed");
   const prev = port ?? store.get("port", null) ?? me?.udpPort ?? null;
-  sel.innerHTML = feeds.map((f) => `<option value="${f.port}">${esc(alias(f.owner || f.player) || `Port ${f.port}`)}${f.active ? `, ${esc(f.track || "")} (élő)` : f.owner ? "" : ` (${f.port})`}</option>`).join("");
+  sel.innerHTML = feeds.map((f) => `<option value="${f.port}">${esc(alias(f.owner || f.player) || `Port ${f.port}`)}${f.active ? `, ${esc(f.track || "")} (live)` : f.owner ? "" : ` (${f.port})`}</option>`).join("");
   const active = feeds.find((f) => f.active);
   const pick = feeds.some((f) => f.port === prev) ? prev : active?.port ?? feeds[0]?.port;
   if (pick != null) { sel.value = pick; if (pick !== port) connect(pick); }
@@ -238,7 +238,7 @@ function connect(p) {
   port = p;
   doc = null; slow = null; focusIdx = -1; trace.points = []; rain.hist = [];
   if (ws) { ws.onclose = null; ws.close(); }
-  setStatus("off", "Kapcsolódás…");
+  setStatus("off", "Connecting…");
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/feeds/${p}/workbench`);
   ws.onopen = () => focusIdx >= 0 && ws.send(JSON.stringify({ focus: focusIdx }));
   ws.onmessage = (e) => {
@@ -248,13 +248,13 @@ function connect(p) {
     doc = d;
     if (d.session) rain.push(d.session.rainNow);
     const stale = d.ageMs > 3000;
-    setStatus(stale ? "stale" : "live", stale ? `Utolsó adat ${Math.round(d.ageMs / 1000)} mp-e` : `Élő${d.session ? `, ${d.session.track}, ${d.session.type}` : ""}`);
+    setStatus(stale ? "stale" : "live", stale ? `Last data ${Math.round(d.ageMs / 1000)} s ago` : `Live${d.session ? `, ${d.session.track}, ${d.session.type}` : ""}`);
     $("empty").hidden = true;
     maybeSegments();
     renderAll();
   };
   ws.onclose = () => {
-    setStatus("off", "Kapcsolat megszakadt, újrapróbálom…");
+    setStatus("off", "Connection lost, retrying…");
     setTimeout(() => port === p && connect(p), 3000);
   };
 }
@@ -267,7 +267,7 @@ async function maybeSegments() {
   segments.track = track; segments.at = Date.now();
   try {
     segments.data = await (await fetch(`/api/feeds/${port}/segments?track=${track}`)).json();
-    segments.note = `${doc.session.track}, elmúlt 12 óra`;
+    segments.note = `${doc.session.track}, last 12 hours`;
   } catch {}
 }
 
@@ -276,7 +276,7 @@ async function loadAliases() { try { aliases = await (await fetch("/api/aliases"
 $("rename").onclick = () => {
   const names = [...new Set([...(doc?.cars || []).map((c) => c.name), ...Object.keys(aliases)].filter(Boolean))].sort();
   $("alias-list").innerHTML = names.length ? names.map((n) => `<label><span>${esc(n)}</span><input data-name="${esc(n)}" value="${esc(aliases[n] || "")}" maxlength="40" placeholder="${esc(n)}"></label>`).join("")
-    : `<p class="wb-muted">Még nincsenek pilóták. Akkor jelennek meg, amikor egy élő session fut.</p>`;
+    : `<p class="wb-muted">No drivers yet. They appear while a live session is running.</p>`;
   $("aliases").showModal();
 };
 $("alias-form").addEventListener("submit", async (e) => {
@@ -284,7 +284,7 @@ $("alias-form").addEventListener("submit", async (e) => {
   const m = {};
   $("alias-list").querySelectorAll("input").forEach((i) => (m[i.dataset.name] = i.value.trim()));
   const res = await fetch("/api/aliases", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(m) });
-  if (!res.ok) alert(`Nem sikerült menteni: ${(await res.text()).trim()}`);
+  if (!res.ok) alert(`Could not save: ${(await res.text()).trim()}`);
   await loadAliases();
   loadFeeds(); renderAll();
 });
@@ -294,10 +294,10 @@ $("hide-nav").onclick = () => {
   const on = !document.body.classList.contains("nav-hidden");
   document.body.classList.toggle("nav-hidden", on);
   $("hide-nav").setAttribute("aria-pressed", on);
-  $("hide-nav").textContent = on ? "Menü mutatása" : "Menü elrejtése";
+  $("hide-nav").textContent = on ? "Show menu" : "Hide menu";
 };
 $("fullscreen").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
-document.addEventListener("fullscreenchange", () => ($("fullscreen").textContent = document.fullscreenElement ? "Kilépés a teljes képernyőből" : "Teljes képernyő"));
+document.addEventListener("fullscreenchange", () => ($("fullscreen").textContent = document.fullscreenElement ? "Exit fullscreen" : "Fullscreen"));
 window.addEventListener("beforeunload", (e) => { if (dirty) e.preventDefault(); });
 window.addEventListener("resize", () => renderAll());
 

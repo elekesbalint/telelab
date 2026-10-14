@@ -258,7 +258,7 @@ func deny(w http.ResponseWriter, r *http.Request, code int, page string) {
 func RequireOwner(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if u, ok := UserFrom(r.Context()); !ok || u.Role != store.RoleOwner {
-			http.Error(w, "csak a csapattulajdonos teheti meg", http.StatusForbidden)
+			http.Error(w, "only the team owner can do this", http.StatusForbidden)
 			return
 		}
 		h(w, r)
