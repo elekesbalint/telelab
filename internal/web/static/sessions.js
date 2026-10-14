@@ -17,6 +17,7 @@ setInterval(() => picker.refresh(), 5000);
 let feeds = [];
 let sessions = [];
 let closedShown = PAGE;
+let fetchedAt = Date.now();
 
 function loadStars() {
   try { return new Set(JSON.parse(localStorage.getItem(STAR_KEY) || "[]")); } catch { return new Set(); }
@@ -38,11 +39,29 @@ function fmtCreated(iso) {
   return `${d.getFullYear()}. ${p(d.getMonth() + 1)}. ${p(d.getDate())}. ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
+function liveAgeMs(row) {
+  if (row.ageMs == null || row.ageMs < 0) return null;
+  return row.ageMs + (Date.now() - fetchedAt);
+}
+
 function ageLabel(ageMs) {
   if (ageMs == null || ageMs < 0) return null;
   if (ageMs < 3000) return { ok: true, text: "Receiving telemetry" };
-  const s = Math.round(ageMs / 1000);
-  return { ok: false, text: `Last data ${s}s ago` };
+  const s = Math.max(1, Math.round(ageMs / 1000));
+  const text = s < 60 ? `Last data ${s}s ago` : `Last data ${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s ago`;
+  return { ok: false, text };
+}
+
+function paintAges() {
+  for (const el of document.querySelectorAll("[data-age-port]")) {
+    const f = feeds.find((x) => x.port === Number(el.dataset.agePort));
+    if (!f) continue;
+    const lab = ageLabel(liveAgeMs(f));
+    if (!lab) { el.hidden = true; continue; }
+    el.hidden = false;
+    el.className = `ses-age ${lab.ok ? "ok" : "stale"}`;
+    el.textContent = `${lab.ok ? "●" : "⚠"} ${lab.text}`;
+  }
 }
 
 function openLive(path, port) {
@@ -68,7 +87,6 @@ function card(row, { active }) {
   const starred = stars.has(key);
   const who = row.owner || row.player || `Port ${row.port}`;
   const title = `${who}${row.track ? ` ${row.track}` : ""}`;
-  const age = active ? ageLabel(row.ageMs) : null;
   const review = row.id != null
     ? `<a class="ses-btn" href="/session.html?id=${row.id}">Review</a>`
     : `<button type="button" class="ses-btn" disabled title="Available after the first completed lap">Review</button>`;
@@ -88,7 +106,7 @@ function card(row, { active }) {
     <div class="ses-card-main">
       <h3>${escapeHtml(title)}</h3>
       <p class="ses-meta">${escapeHtml(metaLine(row))}</p>
-      ${age ? `<p class="ses-age ${age.ok ? "ok" : "stale"}">${age.ok ? "●" : "⚠"} ${escapeHtml(age.text)}</p>` : ""}
+      ${active ? `<p class="ses-age" data-age-port="${row.port}"></p>` : ""}
       <p class="ses-created">Created: ${escapeHtml(fmtCreated(row.startedAt || row.createdAt))}</p>
     </div>
     <div class="ses-card-side">
@@ -170,23 +188,25 @@ function render() {
   const remain = closed.length - slice.length;
   $("more").hidden = remain <= 0;
   $("more").textContent = `Show more (${remain} remaining)`;
+  paintAges();
 }
 
-async function load() {
-  $("summary").textContent = "Loading…";
+async function load({ resetPage = false } = {}) {
+  if (resetPage) $("summary").textContent = "Loading…";
   const [fRes, sRes] = await Promise.all([
     fetch("/api/feeds"),
     fetch("/api/sessions?limit=500&all=1"),
   ]);
   feeds = fRes.ok ? await fRes.json() : [];
   sessions = sRes.ok ? await sRes.json() : [];
-  closedShown = PAGE;
+  fetchedAt = Date.now();
+  if (resetPage) closedShown = PAGE;
   render();
 }
 
 $("q").addEventListener("input", () => { closedShown = PAGE; render(); });
 $("starred").addEventListener("change", () => { closedShown = PAGE; render(); });
-$("refresh").onclick = () => load();
+$("refresh").onclick = () => load({ resetPage: true });
 $("more").onclick = () => { closedShown += PAGE; render(); };
 
 document.querySelector("main.ses").addEventListener("click", (e) => {
@@ -209,5 +229,6 @@ document.querySelector("main.ses").addEventListener("click", (e) => {
   openLive(map[go.dataset.go] || "/", port);
 });
 
-load();
+load({ resetPage: true });
 setInterval(() => load(), 15000);
+setInterval(paintAges, 1000);
