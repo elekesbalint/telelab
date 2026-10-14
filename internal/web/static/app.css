@@ -910,3 +910,45 @@ body.has-side.wb-body .bar .brand { display: inline; }
 .rev-lap-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rev-status.ok { color: var(--thr); }
 .rev-status.bad { color: var(--brk); }
+
+/* ---------- F1 26 Game Data ---------- */
+.gd { max-width: none; width: 100%; box-sizing: border-box; padding: 12px 20px 36px; }
+.gd h1 { font: 700 32px/1 var(--num); margin: 0 0 8px; }
+.gd-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 20px; }
+.gd-tabs button {
+  background: var(--panel); color: var(--dim); border: 1px solid var(--line); border-radius: 6px;
+  padding: 7px 12px; font: 700 12px var(--num); letter-spacing: .04em; cursor: pointer;
+}
+.gd-tabs button.on { background: #c1121f; border-color: #c1121f; color: #fff; }
+.gd-title { font: 600 20px/1.2 var(--num); text-align: center; margin: 0 0 10px; }
+.gd-comp { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.gd-col h2 {
+  font: 600 11px/1.2 var(--text); color: var(--dim); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px;
+}
+.gd-row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.gd-row:first-of-type { border-top: 0; }
+.gd-h { color: var(--hard); font: 700 13px var(--num); }
+.gd-m { color: var(--medium); font: 700 13px var(--num); }
+.gd-s { color: var(--soft); font: 700 13px var(--num); }
+.gd-table { font-size: 13px; }
+.gd-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
+.gd-table td { text-align: center; }
+.gd-table td.name { text-align: left; }
+.gd-heat { font: 600 13px var(--num); }
+.gd-heat.peak { background: rgb(60 196 107 / .28); color: var(--thr); box-shadow: inset 0 0 0 1px var(--thr); }
+.gd-heat.opt { background: rgb(60 196 107 / .16); color: var(--thr); }
+.gd-heat.ok { background: rgb(180 140 40 / .16); }
+.gd-heat.low { background: rgb(242 169 59 / .14); color: var(--hot); }
+.gd-eng { max-width: 720px; margin: 0 auto; }
+.gd-filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 0 0 12px; color: var(--dim); font-size: 13px; }
+.gd-filters select {
+  background: var(--asphalt); color: var(--chalk); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 8px; font: inherit;
+}
+@media (max-width: 1200px) {
+  .gd-comp { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .gd { padding: 12px; }
+  .gd-comp { grid-template-columns: 1fr; }
+}

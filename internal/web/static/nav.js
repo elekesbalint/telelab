@@ -23,6 +23,7 @@ const REVIEW = [
   { href: "/soon.html?t=Race%20ERS%20Maps", label: "Race ERS Maps", soon: true },
   { href: "/soon.html?t=Tyre%20Wear%20Maps", label: "Tyre Wear Maps", soon: true },
   { href: "/soon.html?t=Team%20Database", label: "Team Database", soon: true },
+  { href: "/gamedata.html", label: "F1 26 Game Data" },
 ];
 
 export async function loadMe() {

@@ -35,10 +35,25 @@ CREATE TABLE IF NOT EXISTS laps (
     tyre_visual SMALLINT,
     tyre_actual SMALLINT,
     team_id     INT,
+    wear        REAL,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (session_id, car_idx, lap_num)
 );
 ALTER TABLE laps ADD COLUMN IF NOT EXISTS team_id INT;
+ALTER TABLE laps ADD COLUMN IF NOT EXISTS wear REAL;
+
+-- Player pit-lane times (entry line to exit line), captured when the timer stops.
+CREATE TABLE IF NOT EXISTS pit_stops (
+    id           BIGSERIAL PRIMARY KEY,
+    session_id   BIGINT   NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
+    car_idx      SMALLINT NOT NULL,
+    lap_num      SMALLINT NOT NULL,
+    driver_name  TEXT     NOT NULL DEFAULT '',
+    is_player    BOOLEAN  NOT NULL DEFAULT false,
+    lane_ms      INT      NOT NULL,
+    UNIQUE (session_id, car_idx, lap_num)
+);
+CREATE INDEX IF NOT EXISTS pit_stops_session ON pit_stops (session_id);
 
 -- Player car telemetry at the game's send rate (up to 60 Hz).
 CREATE TABLE IF NOT EXISTS samples (

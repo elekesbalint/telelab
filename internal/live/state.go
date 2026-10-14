@@ -354,3 +354,13 @@ func gear(g int8) string {
 	}
 	return fmt.Sprint(g)
 }
+
+// TyreWear returns corner wear % in UDP order (RL, RR, FL, FR).
+func (s *State) TyreWear(car int) [4]float32 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.Damage == nil || car < 0 || car >= f1udp.MaxCars {
+		return [4]float32{}
+	}
+	return s.Damage.CarDamageData[car].TyresWear
+}

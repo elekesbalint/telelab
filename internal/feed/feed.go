@@ -43,6 +43,7 @@ type Feed struct {
 	motion       *f1udp.PacketMotionData
 
 	sentLaps    map[[2]int]uint32 // (car, lap) -> lap time already written
+	pitActive   [f1udp.MaxCars]uint8
 	samples     []store.Sample
 	lastSamples time.Time
 	lastErrLog  time.Time
@@ -90,6 +91,7 @@ func (f *Feed) Handle(now time.Time, raw []byte) {
 			f.sendField()
 		}
 	case *f1udp.PacketLapData:
+		f.collectPits(h, v)
 		f.lap = v
 	case *f1udp.PacketCarStatusData:
 		f.status = v
@@ -116,6 +118,7 @@ func (f *Feed) newSession(h f1udp.Header) {
 	f.key = sessionKey{uid: strconv.FormatUint(h.SessionUID, 10), port: f.Port}
 	f.session, f.participants, f.lap, f.status, f.motion = nil, nil, nil, nil, nil
 	f.sentLaps = map[[2]int]uint32{}
+	f.pitActive = [f1udp.MaxCars]uint8{}
 	f.lastMeta, f.lastSetup, f.lastField = time.Time{}, time.Time{}, time.Time{}
 	f.sentClass = false
 
@@ -288,6 +291,35 @@ func (f *Feed) sendSetup(now time.Time, h f1udp.Header, v *f1udp.PacketCarSetupD
 	f.writer.enqueue(job{key: f.key, setup: b})
 }
 
+func (f *Feed) collectPits(h f1udp.Header, v *f1udp.PacketLapData) {
+	if f.writer == nil {
+		return
+	}
+	var pits []store.PitStop
+	for i := 0; i < f1udp.MaxCars; i++ {
+		l := v.LapData[i]
+		prev := f.pitActive[i]
+		f.pitActive[i] = l.PitLaneTimerActive
+		if prev != 1 || l.PitLaneTimerActive != 0 {
+			continue
+		}
+		ms := int(l.PitLaneTimeInLaneInMS)
+		if ms < 8000 || ms > 65000 {
+			continue
+		}
+		if i != int(h.PlayerCarIndex) {
+			continue
+		}
+		pits = append(pits, store.PitStop{
+			CarIdx: i, LapNum: int(l.CurrentLapNum), DriverName: f.name(i),
+			IsPlayer: true, LaneMs: ms,
+		})
+	}
+	if len(pits) > 0 {
+		f.writer.enqueue(job{key: f.key, pits: pits})
+	}
+}
+
 func (f *Feed) collectLaps(h f1udp.Header, v *f1udp.PacketSessionHistoryData) {
 	if f.writer == nil || int(v.CarIdx) >= f1udp.MaxCars {
 		return
@@ -316,6 +348,16 @@ func (f *Feed) collectLaps(h f1udp.Header, v *f1udp.PacketSessionHistoryData) {
 			S3:        int(lh.Sector3TimeMinutesPart)*60000 + int(lh.Sector3TimeMSPart),
 			Valid:     lh.LapValidBitFlags&0x01 != 0,
 			TeamID:    f.teamID(car),
+		}
+		if l.IsPlayer {
+			w := f.State.TyreWear(car)
+			var max float32
+			for _, x := range w {
+				if x > max {
+					max = x
+				}
+			}
+			l.Wear = max
 		}
 		for k := 0; k < int(v.NumTyreStints) && k < f1udp.MaxTyreStints; k++ {
 			st := v.TyreStintsHistoryData[k]

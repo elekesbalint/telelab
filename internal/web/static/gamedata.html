@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F1 26 Game Data · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="gd">
+  <h1>F1 26 Game Data</h1>
+  <p class="lead">Reference tables for the 2026 Season Pack (F1 26) — tyre compounds per circuit, grip vs. temperature, engine power vs. temperature, live per-track pit-loss averages, per-track fuel consumption, and per-track, compound tyre wear rates. Captured tables are filtered to F1 26 sessions only; they fill in as sessions arrive.</p>
+  <div class="gd-tabs" id="tabs">
+    <button type="button" data-tab="comp" class="on">Track by Compound</button>
+    <button type="button" data-tab="grip">Tyre Temps</button>
+    <button type="button" data-tab="eng">Engine Temps</button>
+    <button type="button" data-tab="pits">Pit Loss Times</button>
+    <button type="button" data-tab="fuel">Fuel Used</button>
+    <button type="button" data-tab="wear">Tyre Wear</button>
+  </div>
+  <div id="view"></div>
+</main>
+</div>
+<script type="module" src="gamedata.js"></script>
+</body>
+</html>

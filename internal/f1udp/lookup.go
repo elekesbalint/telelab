@@ -37,6 +37,12 @@ var VisualCompoundNames = map[uint8]string{
 	16: "Soft", 17: "Medium", 18: "Hard", 7: "Inter", 8: "Wet",
 }
 
+// ActualCompoundNames maps CarStatus.ActualTyreCompound for F1 Modern (C0–C6).
+var ActualCompoundNames = map[uint8]string{
+	16: "C5", 17: "C4", 18: "C3", 19: "C2", 20: "C1", 21: "C0", 22: "C6",
+	7: "Inter", 8: "Wet",
+}
+
 // ERSDeployModeNames maps CarStatus.ERSDeployMode.
 var ERSDeployModeNames = map[uint8]string{
 	0: "None", 1: "Medium", 2: "Hotlap", 3: "Boost",

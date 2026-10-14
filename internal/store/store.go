@@ -158,6 +158,7 @@ type Lap struct {
 	TyreVisual int
 	TyreActual int
 	TeamID     int
+	Wear       float32
 }
 
 // UpsertLaps stores completed laps (idempotent).
@@ -168,18 +169,19 @@ func (s *Store) UpsertLaps(ctx context.Context, sessionID int64, laps []Lap) err
 	}
 	defer tx.Rollback()
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO laps (session_id, car_idx, lap_num, driver_name, is_player, lap_time_ms, s1_ms, s2_ms, s3_ms, valid, tyre_visual, tyre_actual, team_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		INSERT INTO laps (session_id, car_idx, lap_num, driver_name, is_player, lap_time_ms, s1_ms, s2_ms, s3_ms, valid, tyre_visual, tyre_actual, team_id, wear)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		ON CONFLICT (session_id, car_idx, lap_num) DO UPDATE SET
 			driver_name = EXCLUDED.driver_name, is_player = EXCLUDED.is_player, lap_time_ms = EXCLUDED.lap_time_ms,
 			s1_ms = EXCLUDED.s1_ms, s2_ms = EXCLUDED.s2_ms, s3_ms = EXCLUDED.s3_ms, valid = EXCLUDED.valid,
-			tyre_visual = EXCLUDED.tyre_visual, tyre_actual = EXCLUDED.tyre_actual, team_id = EXCLUDED.team_id`)
+			tyre_visual = EXCLUDED.tyre_visual, tyre_actual = EXCLUDED.tyre_actual, team_id = EXCLUDED.team_id,
+			wear = CASE WHEN EXCLUDED.wear > 0 THEN EXCLUDED.wear ELSE laps.wear END`)
 	if err != nil {
 		return err
 	}
 	for _, l := range laps {
 		if _, err := stmt.ExecContext(ctx, sessionID, l.CarIdx, l.LapNum, l.DriverName, l.IsPlayer, l.LapTimeMs,
-			l.S1, l.S2, l.S3, l.Valid, l.TyreVisual, l.TyreActual, l.TeamID); err != nil {
+			l.S1, l.S2, l.S3, l.Valid, l.TyreVisual, l.TyreActual, l.TeamID, l.Wear); err != nil {
 			return err
 		}
 	}
@@ -230,6 +232,41 @@ func (s *Store) InsertSamples(ctx context.Context, sessionID int64, rows []Sampl
 	}
 	if err := stmt.Close(); err != nil {
 		return err
+	}
+	return tx.Commit()
+}
+
+// PitStop is one completed visit to the pit lane (entry line to exit line).
+type PitStop struct {
+	CarIdx     int
+	LapNum     int
+	DriverName string
+	IsPlayer   bool
+	LaneMs     int
+}
+
+// InsertPitStops stores player pit-lane times (idempotent per car/lap).
+func (s *Store) InsertPitStops(ctx context.Context, sessionID int64, pits []PitStop) error {
+	if sessionID == 0 || len(pits) == 0 {
+		return nil
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO pit_stops (session_id, car_idx, lap_num, driver_name, is_player, lane_ms)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		ON CONFLICT (session_id, car_idx, lap_num) DO UPDATE SET
+			driver_name = EXCLUDED.driver_name, lane_ms = EXCLUDED.lane_ms`)
+	if err != nil {
+		return err
+	}
+	for _, p := range pits {
+		if _, err := stmt.ExecContext(ctx, sessionID, p.CarIdx, p.LapNum, p.DriverName, p.IsPlayer, p.LaneMs); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

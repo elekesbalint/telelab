@@ -22,6 +22,7 @@ type job struct {
 	setup   []byte
 	field   []byte
 	class   []byte
+	pits    []store.PitStop
 }
 
 // Writer is the single background goroutine that talks to the database.
@@ -110,6 +111,11 @@ func (w *Writer) process(j job) {
 	if len(j.class) > 0 {
 		if err := w.st.SaveClassification(ctx, id, j.class); err != nil {
 			log.Printf("writer: classification: %v", err)
+		}
+	}
+	if len(j.pits) > 0 {
+		if err := w.st.InsertPitStops(ctx, id, j.pits); err != nil {
+			log.Printf("writer: pits: %v", err)
 		}
 	}
 }

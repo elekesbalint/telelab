@@ -87,6 +87,7 @@ Elkészült fázisok:
 | **Compare** | `compare.html`, `compare.js` | Egy kör telemetriája, vagy két kör táv szerint igazítva (`?a=<sessionId>:<kör>&b=<sessionId>:<kör>`, a két kör lehet két különböző sessionből is): sebesség, gáz, fék, fokozat, kormány, ERS és időkülönbség (B − A), valamint pályatérkép. |
 | **Connect** | `connect.html` | A belépett pilóta saját beállításai: szerver IP és saját port. Mellette a csapat portkiosztása. |
 | **Team** | `team.html` | Tagok listája. A tulajdonos itt állítja a szerepköröket és a portokat, és itt törölhet tagot. |
+| **F1 26 Game Data** | `gamedata.html` | Referencia-táblák: pályánkénti C-kiosztás, gumi-grip hőmérsékletre, motor-teljesítmény hőre, plusz a csapat futamaiból pit-loss, üzemanyag és gumikopás. |
 | Login / Pending | `login.html`, `pending.html` | Belépés Discorddal. Aki még nincs jóváhagyva, egy várakozó oldalt lát. |
 
 ### Workbench-panelek
@@ -403,6 +404,7 @@ Minden végpont belépéshez kötött (kivéve `/healthz`). JSON-t ad vissza, `C
 | `GET /api/sessions/{id}/laps/{lap}/telemetry` | Egy saját kör telemetriája oszloposan: `dist, t, speed, throttle, brake, steer, gear, rpm, drs, ersMJ, x, z`. Csak az utolsó próbálkozás marad meg (flashback után), és az időt a hivatalos köridőre skálázza. |
 | `GET /api/tracks` | Pályák a rögzített sessionökből: körök, sessionök, pilóták, best lap. |
 | `GET /api/tracks/{id}` | Pálya-részlet: KPI-k, race stintek, compound statisztika, best-lap setupok. |
+| `GET /api/gamedata?driver=` | F1 26 referencia + csapatból számolt pit/fuel/wear aggregátumok. |
 | `GET /api/views` · `POST /api/views` · `PUT /api/views/{id}` · `DELETE /api/views/{id}` | Workbench-nézetek. A törzs: `{name, layout}`, legfeljebb 256 KB, a név legfeljebb 80 karakter. |
 | `GET /api/aliases` · `PUT /api/aliases` | Pilóta-aliasok: `{játékbeliNév: alias}`, aliasonként legfeljebb 40 karakter. |
 | `GET /api/team` | Tagok listája. |
