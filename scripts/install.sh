@@ -14,7 +14,10 @@ command -v docker >/dev/null || die "a docker nincs telepítve"
 docker compose version >/dev/null 2>&1 || die "a docker compose plugin hiányzik: apt install -y docker-compose-plugin"
 
 say "Régi TeleLab konténerek leállítása"
-docker compose down --remove-orphans >/dev/null 2>&1 || true
+# By name, so this works even while .env is still incomplete.
+for c in telelab-caddy telelab-app telelab-ingest; do
+  docker rm -f "$c" >/dev/null 2>&1 || true
+done
 
 say "80-as és 443-as port ellenőrzése"
 busy=$(ss -tlnpH '( sport = :80 or sport = :443 )' 2>/dev/null || true)
