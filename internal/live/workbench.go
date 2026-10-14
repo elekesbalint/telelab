@@ -119,6 +119,7 @@ type WBDetail struct {
 	BrakeBias  uint8            `json:"brakeBias"`
 	TyreSurf   [4]uint8         `json:"tyreSurface"`
 	TyreInner  [4]uint8         `json:"tyreInner"`
+	TyrePress  [4]float32       `json:"tyrePressure"`
 	BrakeTemp  [4]uint16        `json:"brakeTemp"`
 	TyreWear   [4]float32       `json:"tyreWear"`
 	Compound   string           `json:"compound"`
@@ -415,6 +416,7 @@ func (s *State) detail(i int) *WBDetail {
 		d.Speed, d.Gear, d.RPM, d.Throttle, d.Brake, d.Steer = t.Speed, t.Gear, t.EngineRPM, t.Throttle, t.Brake, t.Steer
 		d.DRS, d.EngineTemp = t.DRS, t.EngineTemperature
 		d.TyreSurf, d.TyreInner, d.BrakeTemp = t.TyresSurfaceTemperature, t.TyresInnerTemperature, t.BrakesTemperature
+		d.TyrePress = t.TyresPressure
 	}
 	if s.Status != nil {
 		st := s.Status.CarStatusData[i]

@@ -5,7 +5,7 @@ const LIVE = [
   { href: "/workbench.html", label: "Workbench" },
   { href: "/", label: "Driver View", match: ["/", "/index.html"] },
   { href: "/team-telem.html", label: "Team Telem" },
-  { href: "/soon.html?t=Weather", label: "Weather", soon: true },
+  { href: "/weather.html", label: "Weather" },
   { href: "/soon.html?t=Mobile%20Engineer", label: "Mobile Engineer", soon: true },
   { href: "/connect.html", label: "How to Connect" },
   { href: "/team.html", label: "Team" },

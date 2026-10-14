@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <p class="conn" id="conn" data-state="off">Not connected</p>
+  <div class="userbox" id="me"></div>
+</header>
+
+<main class="wx">
+  <section class="empty" id="empty">
+    <h1>No live data</h1>
+    <p>Select an active session in the header to see the weather briefing.</p>
+  </section>
+
+  <div id="live" hidden>
+    <div class="wx-grid">
+      <section class="panel wx-card wx-brief">
+        <h2>Weather briefing</h2>
+        <div id="wx-brief"></div>
+      </section>
+      <section class="panel wx-card wx-rec">
+        <h2>Game recommended tyre</h2>
+        <div id="wx-rec"></div>
+      </section>
+
+      <section class="panel wx-card wx-sum">
+        <h2>Weather summary</h2>
+        <div id="wx-sum"></div>
+      </section>
+      <section class="panel wx-card wx-radar">
+        <h2>Weather radar</h2>
+        <div id="wx-radar"></div>
+      </section>
+      <section class="panel wx-card wx-rain">
+        <h2>Rain report</h2>
+        <div id="wx-rain"></div>
+      </section>
+
+      <section class="panel wx-card wx-pred">
+        <h2>Rain prediction</h2>
+        <div id="wx-pred"></div>
+      </section>
+      <section class="panel wx-card wx-strat">
+        <h2>Strategy report</h2>
+        <div id="wx-strat"></div>
+      </section>
+
+      <section class="panel wx-card wx-timeline">
+        <h2>Forecast timeline</h2>
+        <div id="wx-timeline"></div>
+      </section>
+      <section class="panel wx-card wx-best">
+        <h2>Best current tyre</h2>
+        <div id="wx-best"></div>
+      </section>
+      <section class="panel wx-card wx-temps">
+        <h2>Tyre temperature map</h2>
+        <div id="wx-temps"></div>
+      </section>
+    </div>
+  </div>
+</main>
+</div>
+<script type="module" src="weather.js"></script>
+</body>
+</html>
