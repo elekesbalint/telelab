@@ -406,6 +406,75 @@ table.clickable tbody tr:hover td, table.clickable tbody tr:focus td { backgroun
   .feed-pick-btn { max-width: 70vw; }
 }
 
+/* ---------- Sessions list ---------- */
+.ses { max-width: none; width: 100%; box-sizing: border-box; padding: 16px 20px 40px; }
+.ses-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.ses-head h1 { font: 700 34px/1 var(--num); margin: 0; letter-spacing: .02em; text-transform: uppercase; }
+.ses-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ses-search input {
+  background: var(--panel); color: var(--chalk); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 12px; font: inherit; min-width: min(280px, 70vw);
+}
+.ses-search input::placeholder { color: var(--dim); }
+.ses-check { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 13px; cursor: pointer; user-select: none; }
+.ses-check input { accent-color: var(--amber); width: 15px; height: 15px; }
+.ses-summary { margin: 0 0 20px; color: var(--dim); font: 500 12px/1.4 var(--num); letter-spacing: .04em; text-transform: uppercase; }
+.ses-block { margin-bottom: 28px; }
+.ses-block h2 {
+  font: 600 12px/1.2 var(--text); color: var(--cold); margin: 0 0 12px;
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.ses-list { display: grid; gap: 10px; }
+.ses-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid rgb(255 255 255 / .05); border-radius: 10px;
+  padding: 14px 16px;
+}
+.ses-card:hover { border-color: rgb(255 255 255 / .1); }
+.ses-card-main { min-width: 0; flex: 1 1 280px; }
+.ses-card-main h3 { font: 600 17px/1.2 var(--num); margin: 0 0 4px; }
+.ses-meta { margin: 0; color: var(--dim); font-size: 13px; }
+.ses-age { margin: 6px 0 0; font-size: 13px; font-weight: 600; }
+.ses-age.ok { color: var(--thr); }
+.ses-age.stale { color: var(--hot); }
+.ses-created { margin: 4px 0 0; color: var(--dim); font-size: 12px; }
+.ses-card-side { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.ses-star {
+  background: none; border: 0; color: var(--dim); font-size: 20px; cursor: pointer; padding: 2px 4px; line-height: 1;
+}
+.ses-star.on { color: var(--amber); }
+.ses-badge {
+  display: inline-block; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line);
+  font: 700 10px/1.2 var(--num); letter-spacing: .06em; text-transform: uppercase; color: var(--dim);
+}
+.ses-badge.active { border-color: var(--thr); color: var(--thr); background: rgb(60 196 107 / .1); }
+.ses-badge.closed { border-color: var(--line); color: var(--dim); }
+.ses-badge.spec { border-color: var(--cold); color: var(--cold); }
+.ses-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.ses-btn {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--chalk); border: 1px solid var(--line); border-radius: 6px;
+  padding: 7px 11px; font: 700 11px/1 var(--num); letter-spacing: .04em; text-transform: uppercase;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.ses-btn:hover:not(:disabled) { border-color: var(--dim); }
+.ses-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ses-btn-primary {
+  background: #c1121f; border-color: #c1121f; color: #fff;
+}
+.ses-btn-primary:hover:not(:disabled) { background: #e01828; border-color: #e01828; }
+.ses-more {
+  display: block; width: min(420px, 100%); margin: 16px auto 0;
+  background: transparent; color: var(--chalk); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 16px; font: 700 12px/1 var(--num); letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.ses-more:hover { border-color: var(--dim); }
+@media (max-width: 720px) {
+  .ses { padding: 12px; }
+  .ses-card-side { width: 100%; justify-content: flex-start; }
+  .ses-actions { width: 100%; }
+}
+
 /* ---------- Weather (full-width) ---------- */
 .wx { max-width: none; width: 100%; box-sizing: border-box; padding: 14px 18px 36px; }
 .wx-grid {

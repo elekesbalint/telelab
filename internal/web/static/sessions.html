@@ -14,64 +14,37 @@
 <div class="maincol">
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <span class="session"></span>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
   <div class="userbox" id="me"></div>
 </header>
-<main class="page">
-  <h1>Sessions</h1>
-  <p class="lead">The team's recorded runs. Open one to see its laps and telemetry, or to compare two laps.</p>
-  <div class="filters">
-    <label>Track <select id="f-track"><option value="">All</option></select></label>
-    <label>Driver <select id="f-player"><option value="">All</option></select></label>
-  </div>
-  <section class="panel">
-    <div class="table-wrap">
-      <table class="clickable">
-        <thead><tr><th>When</th><th>Driver</th><th>Track</th><th>Session</th><th>Laps</th><th>Best lap</th></tr></thead>
-        <tbody id="list"></tbody>
-      </table>
+
+<main class="ses">
+  <div class="ses-head">
+    <h1>Sessions</h1>
+    <div class="ses-tools">
+      <label class="ses-search">
+        <span class="sr">Search sessions</span>
+        <input type="search" id="q" placeholder="Search sessions…" autocomplete="off">
+      </label>
+      <label class="ses-check"><input type="checkbox" id="starred"> Starred only</label>
+      <button type="button" class="btn" id="refresh">Refresh</button>
     </div>
+  </div>
+  <p class="ses-summary" id="summary">Loading…</p>
+
+  <section class="ses-block" id="block-active" hidden>
+    <h2 id="active-title">Active sessions</h2>
+    <div class="ses-list" id="active"></div>
+  </section>
+
+  <section class="ses-block">
+    <h2 id="closed-title">Closed sessions</h2>
+    <div class="ses-list" id="closed"></div>
+    <button type="button" class="ses-more" id="more" hidden>Show more</button>
   </section>
 </main>
-<script type="module">
-  import { initNav, escapeHtml } from "./nav.js";
-  import { fmtLap, fmtDate } from "./fmt.js";
-  await initNav();
-  let all = [];
-  const $ = (id) => document.getElementById(id);
-
-  async function load() {
-    all = await (await fetch("/api/sessions?limit=500")).json();
-    fill($("f-track"), [...new Map(all.map((s) => [s.trackId, s.track])).entries()].sort((a, b) => a[1].localeCompare(b[1])));
-    fill($("f-player"), [...new Set(all.map((s) => s.player).filter(Boolean))].sort().map((p) => [p, p]));
-    render();
-  }
-  function fill(sel, pairs) {
-    const keep = sel.value;
-    sel.length = 1;
-    for (const [v, t] of pairs) sel.add(new Option(t, v));
-    sel.value = keep;
-  }
-  function render() {
-    const t = $("f-track").value, p = $("f-player").value;
-    const rows = all.filter((s) => (!t || String(s.trackId) === t) && (!p || s.player === p));
-    $("list").innerHTML = rows.map((s) => `
-      <tr data-id="${s.id}" tabindex="0">
-        <td>${fmtDate(s.startedAt)}</td>
-        <td class="name">${escapeHtml(s.player || "?")}</td>
-        <td class="name">${escapeHtml(s.track)}</td>
-        <td>${escapeHtml(s.type)}</td>
-        <td>${s.playerLaps}</td>
-        <td>${fmtLap(s.bestLapMs)}</td>
-      </tr>`).join("") || `<tr><td colspan="6">No recorded sessions${t || p ? " match this filter" : " yet. Go out on track; a session shows up here after one full lap"}.</td></tr>`;
-  }
-  $("f-track").addEventListener("change", render);
-  $("f-player").addEventListener("change", render);
-  const open = (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) location.href = `/session.html?id=${tr.dataset.id}`; };
-  $("list").addEventListener("click", open);
-  $("list").addEventListener("keydown", (e) => e.key === "Enter" && open(e));
-  load();
-</script>
 </div>
+<script type="module" src="sessions.js"></script>
 </body>
 </html>
