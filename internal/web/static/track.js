@@ -1,6 +1,7 @@
 import { initNav, escapeHtml } from "./nav.js";
 import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 import { fmtLap, fmtDelta, COMPOUND, COMPOUND_NAME } from "./fmt.js";
+import { SETUP_ROWS, fmtSetup, bindSetupModal } from "./setup.js";
 
 const $ = (id) => document.getElementById(id);
 const me = await initNav();
@@ -8,26 +9,11 @@ if (!me) throw new Error("auth");
 mountFeedPick($("feed-pick"), { preferredPort: preferredFeedPort(me.udpPort ?? null) }).refresh();
 
 const id = Number(new URLSearchParams(location.search).get("id"));
-const SETUP_ROWS = [
-  ["Front wing aero", "frontWing"], ["Rear wing aero", "rearWing"],
-  ["Diff adjustment on throttle", "onThrottle"], ["Diff adjustment off throttle", "offThrottle"], ["Engine braking", "engineBraking"],
-  ["Front camber", "frontCamber"], ["Rear camber", "rearCamber"], ["Front toe", "frontToe"], ["Rear toe", "rearToe"],
-  ["Front suspension", "frontSusp"], ["Rear suspension", "rearSusp"],
-  ["Front anti-roll bar", "frontARB"], ["Rear anti-roll bar", "rearARB"],
-  ["Front ride height", "frontHeight"], ["Rear ride height", "rearHeight"],
-  ["Brake pressure", "brakePressure"], ["Front brake bias", "brakeBias"],
-  ["Front right tyre pressure", "pressFR"], ["Front left tyre pressure", "pressFL"],
-  ["Rear right tyre pressure", "pressRR"], ["Rear left tyre pressure", "pressRL"],
-];
 const SETUP_KIND = {
   "quali-dry": "Quali (dry)", "race-dry": "Race (dry)",
   "quali-wet": "Quali (wet)", "race-wet": "Race (wet)",
 };
 
-function fmtNum(v) {
-  if (v == null) return "–";
-  return typeof v === "number" && !Number.isInteger(v) ? v.toFixed(2) : String(v);
-}
 function pills(ids) {
   return (ids || []).map((v) =>
     `<span class="tt-tyre-pill" style="--c:${COMPOUND[v] || "var(--line)"}">${escapeHtml((COMPOUND_NAME[v] || "?")[0])}</span>`
@@ -173,30 +159,10 @@ $("setups").innerHTML = `
   <thead><tr><th>Setting</th>${setups.map((s) => `<th>${escapeHtml(SETUP_KIND[s.kind] || s.kind)}</th>`).join("")}</tr></thead>
   <tbody>
     <tr><td>Driver</td>${setups.map(setupCell).join("")}</tr>
-    ${SETUP_ROWS.map(([lab, k]) => `<tr><td>${lab}</td>${setups.map((s) => `<td>${s.setup ? fmtNum(s.setup[k]) : "–"}</td>`).join("")}</tr>`).join("")}
+    ${SETUP_ROWS.map(([lab, k]) => `<tr><td>${lab}</td>${setups.map((s) => `<td>${s.setup ? fmtSetup(s.setup[k], k) : "–"}</td>`).join("")}</tr>`).join("")}
   </tbody>`;
 
-async function openSetup(sid, who) {
-  const ses = await (await fetch(`/api/sessions/${sid}`)).then((r) => r.ok ? r.json() : null);
-  $("modal-title").textContent = `Setup — ${who || ""} · ${d.name}`;
-  const su = ses?.setup;
-  $("modal-body").innerHTML = su
-    ? `<table class="trk-table"><thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody>${SETUP_ROWS.map(([lab, k]) =>
-      `<tr><td>${lab}</td><td>${fmtNum(su[k])}</td></tr>`).join("")}</tbody></table>`
-    : `<p class="dv-muted">No setup snapshot stored for this session yet. TeleLab now saves the player car setup while you drive; older sessions will stay empty.</p>`;
-  $("modal").hidden = false;
-}
-
-document.body.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-setup]");
-  if (btn) {
-    e.preventDefault();
-    e.stopPropagation();
-    openSetup(btn.dataset.setup, btn.dataset.who);
-  }
-});
-$("modal-close").onclick = () => { $("modal").hidden = true; };
-$("modal").addEventListener("click", (e) => { if (e.target === $("modal")) $("modal").hidden = true; });
+bindSetupModal();
 
 $("races").addEventListener("click", async (e) => {
   if (e.target.closest("[data-setup], a")) return;

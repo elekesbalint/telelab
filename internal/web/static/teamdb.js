@@ -1,28 +1,13 @@
 import { initNav, escapeHtml } from "./nav.js";
 import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 import { fmtLap, COMPOUND, COMPOUND_NAME } from "./fmt.js";
+import { bindSetupModal } from "./setup.js";
 
 const $ = (id) => document.getElementById(id);
 const me = await initNav();
 if (!me) throw new Error("auth");
 mountFeedPick($("feed-pick"), { preferredPort: preferredFeedPort(me.udpPort ?? null) }).refresh();
 
-const SETUP_ROWS = [
-  ["Front wing aero", "frontWing"], ["Rear wing aero", "rearWing"],
-  ["Diff adjustment on throttle", "onThrottle"], ["Diff adjustment off throttle", "offThrottle"], ["Engine braking", "engineBraking"],
-  ["Front camber", "frontCamber"], ["Rear camber", "rearCamber"], ["Front toe", "frontToe"], ["Rear toe", "rearToe"],
-  ["Front suspension", "frontSusp"], ["Rear suspension", "rearSusp"],
-  ["Front anti-roll bar", "frontARB"], ["Rear anti-roll bar", "rearARB"],
-  ["Front ride height", "frontHeight"], ["Rear ride height", "rearHeight"],
-  ["Brake pressure", "brakePressure"], ["Front brake bias", "brakeBias"],
-  ["Front right tyre pressure", "pressFR"], ["Front left tyre pressure", "pressFL"],
-  ["Rear right tyre pressure", "pressRR"], ["Rear left tyre pressure", "pressRL"],
-];
-
-function fmtNum(v) {
-  if (v == null) return "–";
-  return typeof v === "number" && !Number.isInteger(v) ? v.toFixed(2) : String(v);
-}
 function tyre(v) {
   const name = COMPOUND_NAME[v] || "";
   return `<span class="lb-tyre" style="--c:${COMPOUND[v] || "var(--line)"}">${escapeHtml(name || "–")}</span>`;
@@ -86,7 +71,7 @@ function render() {
             ? `<a class="ses-btn" href="/compare.html?a=${r.sessionId}:${r.lapNum}">Inputs</a>`
             : `<button type="button" class="ses-btn" disabled>Inputs</button>`}
           ${r.hasSetup
-            ? `<button type="button" class="ses-btn" data-setup="${r.sessionId}" data-who="${escapeHtml(r.driver)}">Setup</button>`
+            ? `<button type="button" class="ses-btn" data-setup="${r.sessionId}" data-who="${escapeHtml(r.driver)}" data-lap="${r.lapNum}">Setup</button>`
             : `<button type="button" class="ses-btn" disabled>Setup</button>`}
           <a class="ses-btn" href="/session.html?id=${r.sessionId}" title="Session">i</a>
           <button type="button" class="ses-btn lb-del" data-del="${r.sessionId}" data-lap="${r.lapNum}" title="Delete lap">×</button>
@@ -118,28 +103,14 @@ $("clear").onclick = () => {
 
 $("list").addEventListener("click", async (e) => {
   const del = e.target.closest("[data-del]");
-  if (del) {
-    if (!confirm("Delete this lap from the team database?")) return;
-    const res = await fetch(`/api/sessions/${del.dataset.del}/laps/${del.dataset.lap}`, { method: "DELETE" });
-    if (!res.ok) {
-      alert("Could not delete this lap.");
-      return;
-    }
-    load();
+  if (!del) return;
+  if (!confirm("Delete this lap from the team database?")) return;
+  const res = await fetch(`/api/sessions/${del.dataset.del}/laps/${del.dataset.lap}`, { method: "DELETE" });
+  if (!res.ok) {
+    alert("Could not delete this lap.");
     return;
   }
-  const btn = e.target.closest("[data-setup]");
-  if (!btn) return;
-  const ses = await (await fetch(`/api/sessions/${btn.dataset.setup}`)).then((r) => r.ok ? r.json() : null);
-  $("modal-title").textContent = `Setup — ${btn.dataset.who || ""}`;
-  const su = ses?.setup;
-  $("modal-body").innerHTML = su
-    ? `<table class="trk-table"><thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody>${SETUP_ROWS.map(([lab, k]) =>
-      `<tr><td>${lab}</td><td>${fmtNum(su[k])}</td></tr>`).join("")}</tbody></table>`
-    : `<p class="dv-muted">No setup snapshot stored for this session.</p>`;
-  $("modal").hidden = false;
+  load();
 });
-$("modal-close").onclick = () => { $("modal").hidden = true; };
-$("modal").addEventListener("click", (e) => { if (e.target === $("modal")) $("modal").hidden = true; });
-
+bindSetupModal();
 load();
