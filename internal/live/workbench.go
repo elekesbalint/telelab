@@ -522,10 +522,6 @@ func (s *State) slowPart(pi int) *WBSlow {
 		}
 		sl.LapMatrix = append(sl.LapMatrix, row)
 	}
-	for b := 0; b < OutlineBins; b++ {
-		if s.outlineSet[b] {
-			sl.Outline = append(sl.Outline, s.Outline[b])
-		}
-	}
+	sl.Outline = s.outlinePolyline()
 	return sl
 }

@@ -35,8 +35,9 @@ type State struct {
 
 	// Track outline learnt from the player's own driving: position by
 	// fraction of the lap, used to draw the track map.
-	Outline    [OutlineBins][2]float32
-	outlineSet [OutlineBins]bool
+	Outline      [OutlineBins][2]float32
+	outlineSet   [OutlineBins]bool
+	outlineNudge [OutlineBins]uint8
 
 	Counts     map[f1udp.PacketID]uint64
 	Errors     uint64
@@ -129,21 +130,25 @@ func (s *State) Apply(h f1udp.Header, p any) {
 	}
 }
 
-// learnOutline stores on-track positions by lap fraction. Every car contributes,
-// so the outline appears quickly even if the player is still in the garage.
-// Kept across sessions on the same track (reset on track change).
+// maxOutlineShift is how far a new sample may move an existing bin (metres).
+// Cuts, garage teleports and pit-lane mix-ins sit well above this.
+const maxOutlineShift = float32(50)
+
+// learnOutline stores on-track positions by lap fraction. Every car on the
+// racing line may contribute, so the outline appears quickly. Kept across
+// sessions on the same track (reset on track change).
 func (s *State) learnOutline() {
 	if s.Motion == nil || s.Lap == nil || s.Session == nil || s.Session.TrackLength == 0 {
 		return
 	}
 	if s.outlineTrack != s.Session.TrackID {
 		s.outlineTrack = s.Session.TrackID
-		s.Outline, s.outlineSet = [OutlineBins][2]float32{}, [OutlineBins]bool{}
+		s.Outline, s.outlineSet, s.outlineNudge = [OutlineBins][2]float32{}, [OutlineBins]bool{}, [OutlineBins]uint8{}
 	}
 	tl := float32(s.Session.TrackLength)
 	for i := 0; i < f1udp.MaxCars; i++ {
 		l := s.Lap.LapData[i]
-		if l.ResultStatus < 2 || l.CarPosition == 0 || l.PitStatus != 0 {
+		if l.ResultStatus != 2 || l.CarPosition == 0 || l.PitStatus != 0 || l.DriverStatus == 0 {
 			continue
 		}
 		d := l.LapDistance
@@ -151,12 +156,73 @@ func (s *State) learnOutline() {
 			continue
 		}
 		b := int(d / tl * OutlineBins)
+		if b < 0 || b >= OutlineBins {
+			continue
+		}
 		m := s.Motion.CarMotionData[i]
-		if b >= 0 && b < OutlineBins && (m.WorldPositionX != 0 || m.WorldPositionZ != 0) {
-			s.Outline[b] = [2]float32{m.WorldPositionX, m.WorldPositionZ}
-			s.outlineSet[b] = true
+		x, z := m.WorldPositionX, m.WorldPositionZ
+		if x == 0 && z == 0 {
+			continue
+		}
+		if s.outlineSet[b] {
+			dx, dz := x-s.Outline[b][0], z-s.Outline[b][1]
+			if dx*dx+dz*dz > maxOutlineShift*maxOutlineShift {
+				s.outlineNudge[b]++
+				if s.outlineNudge[b] < 8 {
+					continue
+				}
+				s.Outline[b] = [2]float32{x, z}
+				s.outlineNudge[b] = 0
+				continue
+			}
+			s.outlineNudge[b] = 0
+			s.Outline[b][0] = s.Outline[b][0]*0.75 + x*0.25
+			s.Outline[b][1] = s.Outline[b][1]*0.75 + z*0.25
+			continue
+		}
+		s.Outline[b] = [2]float32{x, z}
+		s.outlineSet[b] = true
+	}
+}
+
+// outlinePolyline returns filled bins in lap order, interpolating tiny holes
+// so the map does not draw chords across the infield.
+func (s *State) outlinePolyline() [][2]float32 {
+	set := s.outlineSet
+	pts := s.Outline
+	const hole = 4
+	for b := 1; b < OutlineBins-1; b++ {
+		if set[b] {
+			continue
+		}
+		prev, next := -1, -1
+		for i := b - 1; i >= 0 && b-i <= hole; i-- {
+			if set[i] {
+				prev = i
+				break
+			}
+		}
+		for i := b + 1; i < OutlineBins && i-b <= hole; i++ {
+			if set[i] {
+				next = i
+				break
+			}
+		}
+		if prev < 0 || next < 0 {
+			continue
+		}
+		t := float32(b-prev) / float32(next-prev)
+		pts[b][0] = pts[prev][0] + (pts[next][0]-pts[prev][0])*t
+		pts[b][1] = pts[prev][1] + (pts[next][1]-pts[prev][1])*t
+		set[b] = true
+	}
+	out := make([][2]float32, 0, OutlineBins)
+	for b := 0; b < OutlineBins; b++ {
+		if set[b] {
+			out = append(out, pts[b])
 		}
 	}
+	return out
 }
 
 // HasData reports whether any packet has been received.

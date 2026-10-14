@@ -2,6 +2,7 @@
 // ctx: { d: latest Workbench doc, slow: latest slow part, alias(name), setFocus(idx), segments, rain }
 import { escapeHtml as esc } from "./nav.js";
 import { fmtLap, fmtDelta } from "./fmt.js";
+import { mapFit, strokeOutline } from "./track-map.js";
 
 const COMPOUND_COLOR = { Soft: "var(--soft)", Medium: "var(--medium)", Hard: "var(--hard)", Inter: "var(--inter)", Wet: "var(--wet)" };
 const COMPOUND_LETTER = { Soft: "S", Medium: "M", Hard: "H", Inter: "I", Wet: "W" };
@@ -145,22 +146,18 @@ export const PANELS = {
       const carPts = d.cars.filter((c) => c.x !== 0 || c.z !== 0).map((c) => [c.x, c.z]);
       const pts = ready ? outline : carPts;
       if (!pts.length) return;
-      const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
-      const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
-      const pad = 28, sc = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxZ - minZ || 1));
-      const ox = (w - (maxX - minX) * sc) / 2, oy = (h - (maxZ - minZ) * sc) / 2;
-      const P = (x, z) => [ox + (x - minX) * sc, h - (oy + (z - minZ) * sc)];
+      const P = mapFit(pts, w, h);
+      if (!P) return;
       const css = getComputedStyle(document.documentElement);
       hint.hidden = ready;
       if (ready) {
-        ctx.strokeStyle = css.getPropertyValue("--dim"); ctx.lineWidth = 10; ctx.lineJoin = ctx.lineCap = "round";
+        ctx.lineJoin = ctx.lineCap = "round";
+        ctx.strokeStyle = css.getPropertyValue("--dim"); ctx.lineWidth = 10;
         ctx.globalAlpha = 0.55;
-        ctx.beginPath(); outline.forEach(([x, z], i) => { const [a, b] = P(x, z); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
-        ctx.closePath(); ctx.stroke();
+        strokeOutline(ctx, outline, P);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = css.getPropertyValue("--chalk"); ctx.lineWidth = 2.5; ctx.globalAlpha = 0.35;
-        ctx.beginPath(); outline.forEach(([x, z], i) => { const [a, b] = P(x, z); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
-        ctx.closePath(); ctx.stroke();
+        strokeOutline(ctx, outline, P);
         ctx.globalAlpha = 1;
       }
       el._dots = [];

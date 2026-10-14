@@ -2,6 +2,7 @@
 import { initNav, escapeHtml } from "./nav.js";
 import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 import { fmtLap, fmtDelta } from "./fmt.js";
+import { mapFit, strokeOutline } from "./track-map.js";
 
 const $ = (id) => document.getElementById(id);
 const WEATHER = ["Clear", "Light cloud", "Overcast", "Light rain", "Heavy rain", "Storm"];
@@ -572,12 +573,7 @@ function drawInputCharts() {
 }
 
 function mapProject(pts, w, h, pad = 18) {
-  if (!pts.length) return null;
-  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
-  const sc = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxZ - minZ || 1));
-  const ox = (w - (maxX - minX) * sc) / 2, oy = (h - (maxZ - minZ) * sc) / 2;
-  return (x, z) => [ox + (x - minX) * sc, h - (oy + (z - minZ) * sc)];
+  return mapFit(pts, w, h, pad);
 }
 
 function drawInputMaps() {
@@ -609,11 +605,9 @@ function drawInputMaps() {
     if (!P) return;
     ctx.strokeStyle = css.getPropertyValue("--dim");
     ctx.lineWidth = zoom ? 3 : 6;
+    ctx.lineJoin = ctx.lineCap = "round";
     ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    view.forEach(([x, z], k) => { const [a, b] = P(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
-    if (!zoom && outline.length >= 8) ctx.closePath();
-    ctx.stroke();
+    strokeOutline(ctx, view, P, { close: !zoom && outline.length >= 8 });
     ctx.globalAlpha = 1;
     if (trail.length > 1 && !zoom) {
       ctx.beginPath();
