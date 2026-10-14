@@ -1,6 +1,6 @@
 // TeleLab Workbench: a pit-wall dashboard built from movable panels.
 import { initNav, escapeHtml as esc } from "./nav.js";
-import { mountFeedPick, loadSavedPort } from "./feed-pick.js";
+import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 import { PANELS, DEFAULT_VIEWS } from "./panels.js";
 
 const $ = (id) => document.getElementById(id);
@@ -224,7 +224,7 @@ function setFocus(idx) {
 
 // ---------- feeds & data ----------
 const picker = mountFeedPick($("feed-pick"), {
-  preferredPort: loadSavedPort() ?? me?.udpPort ?? null,
+  preferredPort: preferredFeedPort(me?.udpPort ?? null),
   onChange: (p) => connect(p),
 });
 async function loadFeeds() { await picker.refresh(); }

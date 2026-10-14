@@ -18,6 +18,16 @@ export function savePort(port) {
   try { localStorage.setItem(KEY, String(port)); } catch {}
 }
 
+/** URL ?port= wins, then the last picked feed, then `fallback`. */
+export function preferredFeedPort(fallback = null) {
+  const q = Number(new URLSearchParams(location.search).get("port"));
+  if (Number.isFinite(q) && q > 0) {
+    savePort(q);
+    return q;
+  }
+  return loadSavedPort() ?? fallback;
+}
+
 /**
  * Mount a feed picker into `root`. Calls onChange(port) when the user picks one.
  * Returns { setPort, refresh, destroy }.
@@ -39,6 +49,7 @@ export function mountFeedPick(root, { onChange, preferredPort = null } = {}) {
   let feeds = [];
   let port = preferredPort ?? loadSavedPort();
   let open = false;
+  let primed = false;
 
   const close = () => {
     open = false;
@@ -97,13 +108,18 @@ export function mountFeedPick(root, { onChange, preferredPort = null } = {}) {
     const changed = next !== port;
     port = next;
     paint();
-    if (changed && port != null) onChange?.(port);
+    // First resolve must notify even if the saved port did not change,
+    // otherwise live pages wait until the user picks the same session again.
+    if (port != null && (changed || !primed)) {
+      primed = true;
+      onChange?.(port);
+    }
     return port;
   }
 
   return {
     getPort: () => port,
-    setPort: (p) => { port = p; savePort(p); paint(); },
+    setPort: (p) => { port = p; savePort(p); paint(); onChange?.(p); },
     refresh,
     destroy: () => document.removeEventListener("click", onDoc),
   };

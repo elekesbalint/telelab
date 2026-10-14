@@ -1,6 +1,6 @@
 // Sessions list: active feeds + closed DB sessions (SetupLab-style cards).
 import { initNav, escapeHtml } from "./nav.js";
-import { mountFeedPick, loadSavedPort, savePort } from "./feed-pick.js";
+import { mountFeedPick, preferredFeedPort, savePort } from "./feed-pick.js";
 import { fmtLap } from "./fmt.js";
 
 const $ = (id) => document.getElementById(id);
@@ -10,7 +10,9 @@ const PAGE = 30;
 const me = await initNav();
 if (!me) throw new Error("auth");
 
-mountFeedPick($("feed-pick"), { preferredPort: loadSavedPort() ?? me.udpPort ?? null });
+const picker = mountFeedPick($("feed-pick"), { preferredPort: preferredFeedPort(me.udpPort ?? null) });
+picker.refresh();
+setInterval(() => picker.refresh(), 5000);
 
 let feeds = [];
 let sessions = [];
@@ -45,7 +47,9 @@ function ageLabel(ageMs) {
 
 function openLive(path, port) {
   if (port != null) savePort(port);
-  location.href = path;
+  const u = new URL(path, location.origin);
+  if (port != null) u.searchParams.set("port", String(port));
+  location.href = u.pathname + u.search;
 }
 
 function metaLine(row) {
@@ -73,7 +77,7 @@ function card(row, { active }) {
     <button type="button" class="ses-btn ses-btn-primary" data-go="workbench" data-port="${row.port}">Workbench</button>
     <button type="button" class="ses-btn" data-go="driver" data-port="${row.port}">Driver View</button>
     <button type="button" class="ses-btn" data-go="telem" data-port="${row.port}">Team Telem</button>
-    <a class="ses-btn" href="/connect.html">Connect</a>
+    <button type="button" class="ses-btn" data-go="connect" data-port="${row.port}">Connect</button>
     ${review}` : `
     <button type="button" class="ses-btn ses-btn-primary" data-go="workbench" data-port="${row.port}">Workbench</button>
     <button type="button" class="ses-btn" data-go="telem" data-port="${row.port}">Team Telem</button>
@@ -197,7 +201,11 @@ document.querySelector("main.ses").addEventListener("click", (e) => {
   const go = e.target.closest("[data-go]");
   if (!go) return;
   const port = Number(go.dataset.port);
-  const map = { workbench: "/workbench.html", driver: "/", telem: "/team-telem.html" };
+  if (go.dataset.go === "connect") {
+    picker.setPort(port);
+    return;
+  }
+  const map = { workbench: "/workbench.html", driver: "/", telem: "/team-telem.html", weather: "/weather.html" };
   openLive(map[go.dataset.go] || "/", port);
 });
 

@@ -1,6 +1,6 @@
 // Weather page: briefing, radar, grip and tyre sets from the workbench feed.
 import { initNav, escapeHtml } from "./nav.js";
-import { mountFeedPick, loadSavedPort } from "./feed-pick.js";
+import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 import { fmtDelta } from "./fmt.js";
 
 const $ = (id) => document.getElementById(id);
@@ -26,7 +26,7 @@ const muHist = [];
 let lastWxKey = null, lastWxAt = 0;
 
 const picker = mountFeedPick($("feed-pick"), {
-  preferredPort: loadSavedPort() ?? me.udpPort ?? null,
+  preferredPort: preferredFeedPort(me.udpPort ?? null),
   onChange: (p) => connect(p),
 });
 picker.refresh();

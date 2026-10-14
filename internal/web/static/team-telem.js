@@ -1,6 +1,6 @@
 // Team Telem: multi-panel live engineering view for the selected feed.
 import { initNav, escapeHtml } from "./nav.js";
-import { mountFeedPick, loadSavedPort } from "./feed-pick.js";
+import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 import { fmtLap, fmtDelta } from "./fmt.js";
 
 const $ = (id) => document.getElementById(id);
@@ -25,7 +25,7 @@ let lastSampleLap = 0;
 let inputsBound = false;
 
 const picker = mountFeedPick($("feed-pick"), {
-  preferredPort: loadSavedPort() ?? me.udpPort ?? null,
+  preferredPort: preferredFeedPort(me.udpPort ?? null),
   onChange: (p) => connect(p),
 });
 picker.refresh();

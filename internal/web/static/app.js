@@ -1,6 +1,6 @@
 // TeleLab Driver View. Connects to /api/feeds/{port}/live and renders each snapshot (10 Hz).
 import { initNav, escapeHtml } from "./nav.js";
-import { mountFeedPick } from "./feed-pick.js";
+import { mountFeedPick, preferredFeedPort } from "./feed-pick.js";
 
 const $ = (id) => document.getElementById(id);
 const COMPOUND = { Soft: "var(--soft)", Medium: "var(--medium)", Hard: "var(--hard)", Inter: "var(--inter)", Wet: "var(--wet)" };
@@ -30,7 +30,7 @@ initNav().then((me) => {
   myPort = me.udpPort ?? null;
   $("empty-ip").textContent = publicIp || location.hostname;
   picker = mountFeedPick($("feed-pick"), {
-    preferredPort: myPort,
+    preferredPort: preferredFeedPort(myPort),
     onChange: (port) => connect(port),
   });
   picker.refresh();
