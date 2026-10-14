@@ -142,7 +142,7 @@ function renderRain() {
     $("tt-rain").innerHTML = `<p class="dv-muted">Waiting for forecast samples.</p>`;
     return;
   }
-  const W = 520, H = 140, pad = 28;
+  const W = 900, H = 160, pad = 28;
   const maxOff = Math.max(1, ...f.map((x) => x.offset));
   const maxT = Math.max(20, ...f.map((x) => Math.max(x.trackTemp, x.airTemp)));
   const minT = Math.min(0, ...f.map((x) => Math.min(x.trackTemp, x.airTemp)));
@@ -382,13 +382,13 @@ function renderSetup() {
     return;
   }
   const g = (title, rows) => `<div class="tt-setup-g"><h3>${title}</h3>${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>`;
-  $("tt-setup").innerHTML = [
+  $("tt-setup").innerHTML = `<div class="tt-setup-grid">${[
     g("Aero", [["Front wing", s.FrontWing], ["Rear wing", s.RearWing]]),
     g("Differential", [["On throttle", s.OnThrottle], ["Off throttle", s.OffThrottle]]),
     g("Suspension", [["Front", s.FrontSusp], ["Rear", s.RearSusp], ["Front ARB", s.FrontARB], ["Rear ARB", s.RearARB]]),
     g("Brakes", [["Pressure", s.BrakePressure], ["Bias", s.BrakeBias]]),
     g("Fuel", [["Load", s.FuelLoad?.toFixed?.(1) ?? s.FuelLoad]]),
-  ].join("");
+  ].join("")}</div>`;
 }
 
 function drawTrace() {

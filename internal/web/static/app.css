@@ -267,53 +267,69 @@ table.clickable tbody tr:hover td, table.clickable tbody tr:focus td { backgroun
 .feed-pick-item:hover, .feed-pick-item.on { background: rgb(95 168 232 / .18); }
 .feed-pick-item.live::after { content: " LIVE"; color: var(--thr); font: 700 10px var(--num); letter-spacing: .04em; }
 
-/* ---------- Team Telem ---------- */
-.tt { max-width: 1400px; }
-.tt-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; }
+/* ---------- Team Telem (full-width engineering layout) ---------- */
+.tt {
+  max-width: none; width: 100%; box-sizing: border-box;
+  padding: 16px 20px 40px;
+}
+.tt-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; border-bottom: 1px solid var(--line); }
 .tt-tabs button {
   background: none; border: 0; border-bottom: 2px solid transparent; color: var(--dim);
-  padding: 8px 12px; font: 600 13px var(--text); cursor: pointer; text-transform: uppercase; letter-spacing: .04em;
+  padding: 10px 14px; margin-bottom: -1px; font: 600 13px var(--text); cursor: pointer;
+  text-transform: uppercase; letter-spacing: .04em;
 }
 .tt-tabs button:hover { color: var(--chalk); }
 .tt-tabs button.on { color: var(--chalk); border-bottom-color: var(--amber); }
-.tt-meta { margin: 0 0 14px; color: var(--dim); font-size: 13px; }
-.tt-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.tt-card h2 {
+.tt-meta { margin: 0 0 8px; color: var(--dim); font-size: 13px; }
+.tt-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.tt-card { min-width: 0; }
+.tt-card h2, .tt .panel > h2 {
   font: 600 12px/1.2 var(--text); color: var(--dim); margin: 0 0 12px;
   text-transform: uppercase; letter-spacing: .06em;
 }
-.tt-span2 { grid-column: span 2; }
-.tt-span4 { grid-column: span 4; }
+.tt-span2 { grid-column: span 6; }
+.tt-span4 { grid-column: span 12; }
 .tt-filter { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 12px; margin: 0 0 10px; }
 .tt-filter input { accent-color: var(--amber); }
-.tt-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 280px; overflow: auto; }
+.tt-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 260px; overflow: auto; }
 .tt-events li { border-top: 1px solid var(--line); padding-top: 8px; font-size: 14px; }
 .tt-events time { display: block; color: var(--dim); font: 500 12px var(--num); }
 .tt-events li.hot { color: var(--amber); }
-.tt-tyres { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+/* Tyres: stretch into a wide strip (≈10 across on desktop, not a tall stack). */
+.tt-tyres {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+}
 .tt-tyre {
-  background: var(--asphalt); border-radius: 8px; padding: 10px 8px; text-align: center;
-  border-top: 3px solid var(--c, var(--line)); display: grid; gap: 2px;
+  background: var(--asphalt); border-radius: 8px; padding: 8px 6px; text-align: center;
+  border-top: 3px solid var(--c, var(--line)); display: grid; gap: 1px; min-width: 0;
 }
 .tt-tyre.fitted { box-shadow: inset 0 0 0 1px var(--amber); }
 .tt-tyre.gone { opacity: .45; }
 .tt-tyre-badge {
-  display: grid; place-items: center; width: 28px; height: 28px; margin: 0 auto 4px;
-  border-radius: 50%; border: 3px solid var(--c, var(--line)); font: 700 13px var(--num);
+  display: grid; place-items: center; width: 26px; height: 26px; margin: 0 auto 2px;
+  border-radius: 50%; border: 3px solid var(--c, var(--line)); font: 700 12px var(--num);
 }
-.tt-tyre span { font-size: 12px; color: var(--dim); }
-.tt-tyre em { font-style: normal; font: 600 14px var(--num); }
-.tt-tyre small { color: var(--dim); font-size: 11px; }
-.tt-chart { width: 100%; height: auto; display: block; }
-.tt-setup-g { margin-bottom: 14px; }
+.tt-tyre span { font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-tyre em { font-style: normal; font: 600 13px var(--num); }
+.tt-tyre small { color: var(--dim); font-size: 10px; }
+.tt-chart { width: 100%; height: auto; min-height: 140px; display: block; }
+.tt-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.tt-setup-g { margin: 0; background: var(--asphalt); border-radius: 8px; padding: 12px 14px; }
 .tt-setup-g h3 { margin: 0 0 8px; font: 600 14px var(--num); color: var(--dim); }
 .tt-setup-g div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding: 6px 0; font-size: 13px; }
 .tt-setup-g span { color: var(--dim); }
 .tt-setup-g b { font: 600 15px var(--num); }
-.tt-trace { width: 100%; height: 160px; display: block; background: var(--asphalt); border-radius: 8px; }
-.tt-sum { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 14px; color: var(--dim); font-size: 13px; }
+.tt-trace { width: 100%; height: 200px; display: block; background: var(--asphalt); border-radius: 8px; }
+.tt-sum { display: flex; flex-wrap: wrap; gap: 18px; margin: 0 0 14px; color: var(--dim); font-size: 13px; }
 .tt-sum b { font-family: var(--num); }
-.tt-table { font-size: 13px; }
+.tt .panel { width: 100%; }
+.tt-wide { width: 100%; }
+.tt .table-wrap { width: 100%; overflow-x: auto; }
+.tt-table { width: 100%; table-layout: auto; font-size: 13px; }
+.tt-table th, .tt-table td { padding: 8px 10px; white-space: nowrap; }
+.tt-table td.name { white-space: nowrap; max-width: none; }
 .tt-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 .tt-table td.amber { color: var(--amber); }
 .tt-table tr.rival td { background: rgb(95 168 232 / .1); }
@@ -335,15 +351,20 @@ table.clickable tbody tr:hover td, table.clickable tbody tr:focus td { backgroun
 .tt-rival-card .lab { display: block; color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
 .tt-rival-card b { font: 700 18px var(--num); }
 .tt-rival-card p { margin: 6px 0 0; color: var(--dim); font-size: 13px; }
-.tt-rival-chart { width: 100%; height: 200px; display: block; background: var(--asphalt); border-radius: 8px; }
-@media (max-width: 640px) { .tt-rival-pair { grid-template-columns: 1fr; } }
+.tt-rival-chart { width: 100%; height: 220px; display: block; background: var(--asphalt); border-radius: 8px; }
+@media (max-width: 1400px) {
+  .tt-tyres { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
 @media (max-width: 1100px) {
-  .tt-grid { grid-template-columns: 1fr 1fr; }
-  .tt-span2, .tt-span4 { grid-column: span 2; }
+  .tt-span2 { grid-column: span 12; }
+  .tt-tyres { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
+  .tt { padding: 12px 12px 32px; }
   .tt-grid { grid-template-columns: 1fr; }
   .tt-span2, .tt-span4 { grid-column: auto; }
+  .tt-tyres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tt-rival-pair { grid-template-columns: 1fr; }
   .feed-pick-btn { max-width: 70vw; }
 }
 
