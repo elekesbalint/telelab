@@ -2,7 +2,8 @@
 //
 //	telelab-fakegame [host:port] [frames]
 //
-// FAKE_LAP_SECONDS shortens the simulated lap (default 80) for quick tests.
+// host:port defaults to 127.0.0.1:31600. frames = 0 (the default) runs until
+// Ctrl+C. FAKE_LAP_SECONDS shortens the simulated lap (default 80) for quick tests.
 package main
 
 import (
@@ -19,7 +20,7 @@ func main() {
 	if len(os.Args) > 1 {
 		to = os.Args[1]
 	}
-	frames := 60
+	frames := 0 // 0 = run until stopped
 	if len(os.Args) > 2 {
 		frames, _ = strconv.Atoi(os.Args[2])
 	}
@@ -30,7 +31,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for i := 0; i < frames; i++ {
+	for i := 0; frames == 0 || i < frames; i++ {
 		for _, b := range fake.Frame(uint32(i), float32(i)/20) {
 			c.Write(b)
 		}

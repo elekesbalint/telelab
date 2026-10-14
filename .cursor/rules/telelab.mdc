@@ -1,0 +1,13 @@
+---
+description: TeleLab project rules
+alwaysApply: true
+---
+
+Follow AGENTS.md in the repository root. For details (architecture, deploy, VPS, API, database, roadmap) read docs/DOCUMENTATION.md.
+
+Key rules:
+- Reply to the owner in Hungarian; keep UI text, code, comments and commit messages in English.
+- F1 26 only (UDP Format 2026). Never commit secrets (.env) or the EA spec files (spec/).
+- The UDP receive path must never block on the database; schema.sql must stay idempotent.
+- Frontend is vanilla JS ES modules embedded with go:embed: no frameworks, no bundler, no CDNs; escape game/user strings with escapeHtml.
+- Before committing: gofmt -l . (empty), go vet ./..., go test ./..., node --check on changed JS files.
