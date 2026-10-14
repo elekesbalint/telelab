@@ -221,13 +221,13 @@ export const PANELS = {
     render(el, { d }) {
       const f = d.focus;
       if (!f) return (el.innerHTML = empty("No data yet."));
-      const store = Math.max(0, Math.min(100, (f.ersStoreMJ / 4) * 100));
+      const store = Math.max(0, Math.min(100, f.ersPct ?? (f.ersStoreMJ / 4) * 100));
       el.innerHTML = `<div class="tiles">
           <div><span>Speed</span><b>${f.speed} km/h</b></div><div><span>Engine</span><b class="${f.engineTemp > 115 ? "bad" : ""}">${f.engineTemp} °C</b></div>
           <div><span>Gear</span><b>${f.gear < 0 ? "R" : f.gear === 0 ? "N" : f.gear}</b></div><div><span>RPM</span><b>${f.rpm}</b></div>
           <div><span>DRS</span><b class="${f.drs ? "good" : "dim"}">${f.drs ? "Open" : f.drsAllowed ? "Available" : "Closed"}</b></div><div><span>Brake bias</span><b>${f.brakeBias}%</b></div>
         </div>
-        <div class="ers-line"><span>ERS</span><em>${ERS_NAME[f.ersMode] || f.ersMode}</em><i><b style="width:${store}%"></b></i><strong>${f.ersStoreMJ.toFixed(2)} MJ</strong></div>
+        <div class="ers-line"><span>ERS</span><em>${ERS_NAME[f.ersMode] || f.ersMode}</em><i><b style="width:${store}%"></b></i><strong>${Math.round(store)}%</strong></div>
         <p class="wb-muted small">Aero: ${esc(f.aero || "–")}, Overtake: ${esc(f.overtake || "–")}, fuel ${f.fuel.toFixed(1)} kg (${f.fuelLaps >= 0 ? "+" : ""}${f.fuelLaps.toFixed(2)} laps)</p>`;
     },
   },
