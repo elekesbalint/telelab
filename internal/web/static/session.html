@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/uPlot.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <nav class="nav" aria-label="Fő menü">
+    <a href="/">Élő</a><a href="/sessions.html" aria-current="page">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  </nav>
+  <span class="session"></span>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="page">
+  <p class="back"><a href="/sessions.html">Összes session</a></p>
+  <h1 id="title">Session</h1>
+  <p class="lead" id="lead"></p>
+
+  <section class="panel">
+    <h2>Köridők</h2>
+    <div id="chart" class="chart"></div>
+  </section>
+
+  <section class="panel" style="margin-top:16px">
+    <div class="panel-head">
+      <h2>Körök</h2>
+      <button class="primary" id="compare" disabled>Kijelölt körök összehasonlítása</button>
+    </div>
+    <p class="hint" id="pick-hint">Jelölj ki egy kört A-nak és egyet B-nek. A B-kört másik sessionből is kiválaszthatod az összehasonlító oldalon.</p>
+    <div class="table-wrap">
+      <table class="laps">
+        <thead><tr><th>A</th><th>B</th><th>Kör</th><th>Köridő</th><th>S1</th><th>S2</th><th>S3</th><th>Gumi</th><th></th></tr></thead>
+        <tbody id="laps"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:16px">
+    <h2>Mezőny legjobb körei</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Pilóta</th><th>Legjobb kör</th><th>Különbség</th><th>Körök</th></tr></thead>
+        <tbody id="field"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="vendor/uPlot.iife.min.js"></script>
+<script type="module">
+  import { initNav, escapeHtml } from "./nav.js";
+  import { fmtLap, fmtDelta, fmtDate, COMPOUND, COMPOUND_NAME } from "./fmt.js";
+  await initNav();
+  const $ = (id) => document.getElementById(id);
+  const id = new URLSearchParams(location.search).get("id");
+  const [ses, laps] = await Promise.all([
+    fetch(`/api/sessions/${id}`).then((r) => (r.ok ? r.json() : null)),
+    fetch(`/api/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : [])),
+  ]);
+  if (!ses) { $("title").textContent = "Ez a session nem található"; throw new Error("not found"); }
+  document.title = `${ses.player} – ${ses.track} · TeleLab`;
+  $("title").textContent = `${ses.player || "?"}, ${ses.track}`;
+  $("lead").textContent = `${ses.type}, ${fmtDate(ses.startedAt)}${ses.online ? ", online" : ""}. Legjobb érvényes kör: ${fmtLap(ses.bestLapMs)}.`;
+
+  const mine = laps.filter((l) => l.isPlayer).sort((a, b) => a.lapNum - b.lapNum);
+  const best = (k) => Math.min(...mine.filter((l) => l.valid && l[k]).map((l) => l[k]));
+  const bestLap = best("lapTimeMs"), b1 = best("s1Ms"), b2 = best("s2Ms"), b3 = best("s3Ms");
+  const cls = (v, b) => (v && v === b ? "purple" : "");
+
+  $("laps").innerHTML = mine.map((l) => `
+    <tr class="${l.valid ? "" : "invalid"}">
+      <td><input type="radio" name="a" value="${l.lapNum}" aria-label="${l.lapNum}. kör legyen az A"></td>
+      <td><input type="radio" name="b" value="${l.lapNum}" aria-label="${l.lapNum}. kör legyen a B"></td>
+      <td>${l.lapNum}</td>
+      <td class="${cls(l.lapTimeMs, bestLap)}">${fmtLap(l.lapTimeMs)}</td>
+      <td class="${cls(l.s1Ms, b1)}">${fmtLap(l.s1Ms)}</td>
+      <td class="${cls(l.s2Ms, b2)}">${fmtLap(l.s2Ms)}</td>
+      <td class="${cls(l.s3Ms, b3)}">${fmtLap(l.s3Ms)}</td>
+      <td><span class="dot" style="--c:${COMPOUND[l.tyreVisual] || "var(--line)"}"></span>${COMPOUND_NAME[l.tyreVisual] || ""}</td>
+      <td>${l.valid ? "" : "érvénytelen"}</td>
+    </tr>`).join("") || `<tr><td colspan="9">Ebben a sessionben nincs befejezett köröd.</td></tr>`;
+
+  // default selection: A = best lap, B = second best
+  const ranked = mine.filter((l) => l.valid).sort((a, b) => a.lapTimeMs - b.lapTimeMs);
+  if (ranked[0]) document.querySelector(`input[name=a][value="${ranked[0].lapNum}"]`).checked = true;
+  if (ranked[1]) document.querySelector(`input[name=b][value="${ranked[1].lapNum}"]`).checked = true;
+  const sync = () => {
+    const a = document.querySelector("input[name=a]:checked"), b = document.querySelector("input[name=b]:checked");
+    $("compare").disabled = !a;
+    $("compare").textContent = a && b ? `${a.value}. és ${b.value}. kör összehasonlítása` : a ? `${a.value}. kör megnyitása` : "Jelölj ki egy kört";
+  };
+  $("laps").addEventListener("change", sync);
+  sync();
+  $("compare").addEventListener("click", () => {
+    const a = document.querySelector("input[name=a]:checked")?.value, b = document.querySelector("input[name=b]:checked")?.value;
+    const q = new URLSearchParams({ a: `${id}:${a}` });
+    if (b && b !== a) q.set("b", `${id}:${b}`);
+    location.href = `/compare.html?${q}`;
+  });
+
+  // field: best lap per car
+  const byCar = new Map();
+  for (const l of laps) {
+    const c = byCar.get(l.carIdx) ?? { driver: l.driver, isPlayer: l.isPlayer, best: 0, n: 0 };
+    c.n++;
+    if (l.valid && (!c.best || l.lapTimeMs < c.best)) c.best = l.lapTimeMs;
+    byCar.set(l.carIdx, c);
+  }
+  const field = [...byCar.values()].filter((c) => c.best).sort((a, b) => a.best - b.best);
+  $("field").innerHTML = field.map((c, i) => `
+    <tr class="${c.isPlayer ? "me" : ""}"><td>${i + 1}</td><td class="name">${escapeHtml(c.driver || "?")}</td>
+    <td class="${i === 0 ? "purple" : ""}">${fmtLap(c.best)}</td><td>${i ? fmtDelta(c.best - field[0].best) : "–"}</td><td>${c.n}</td></tr>`).join("")
+    || `<tr><td colspan="5">Nincs érvényes kör.</td></tr>`;
+
+  // lap time chart
+  if (mine.length) {
+    const css = getComputedStyle(document.documentElement);
+    const col = (v) => css.getPropertyValue(v).trim();
+    const xs = mine.map((l) => l.lapNum);
+    const valid = mine.map((l) => (l.valid ? l.lapTimeMs / 1000 : null));
+    const invalid = mine.map((l) => (l.valid ? null : l.lapTimeMs / 1000));
+    const el = $("chart");
+    const plot = new uPlot({
+      width: el.clientWidth, height: 240,
+      legend: { show: false },
+      cursor: { points: { size: 8 } },
+      scales: { x: { time: false } },
+      axes: [
+        { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, label: "Kör", labelSize: 20, incrs: [1, 2, 5, 10] },
+        { stroke: col("--dim"), grid: { stroke: col("--line"), width: 1 }, size: 70, values: (u, v) => v.map((s) => fmtLap(Math.round(s * 1000))) },
+      ],
+      series: [
+        {},
+        { label: "Érvényes", stroke: col("--amber"), width: 2, points: { size: 7, fill: col("--amber") }, spanGaps: true },
+        { label: "Érvénytelen", stroke: "transparent", points: { show: true, size: 7, stroke: col("--dim"), fill: col("--panel") } },
+      ],
+    }, [xs, valid, invalid], el);
+    new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: 240 })).observe(el);
+  }
+</script>
+</body>
+</html>

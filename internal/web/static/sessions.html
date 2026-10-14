@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessionök · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <nav class="nav" aria-label="Fő menü">
+    <a href="/">Élő</a><a href="/sessions.html">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  </nav>
+  <span class="session"></span>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="page">
+  <h1>Sessionök</h1>
+  <p class="lead">A csapat mentett futásai. Nyiss meg egyet a körök és a telemetria megtekintéséhez, vagy két kör összehasonlításához.</p>
+  <div class="filters">
+    <label>Pálya <select id="f-track"><option value="">Mind</option></select></label>
+    <label>Pilóta <select id="f-player"><option value="">Mind</option></select></label>
+  </div>
+  <section class="panel">
+    <div class="table-wrap">
+      <table class="clickable">
+        <thead><tr><th>Mikor</th><th>Pilóta</th><th>Pálya</th><th>Session</th><th>Körök</th><th>Legjobb kör</th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script type="module">
+  import { initNav, escapeHtml } from "./nav.js";
+  import { fmtLap, fmtDate } from "./fmt.js";
+  await initNav();
+  let all = [];
+  const $ = (id) => document.getElementById(id);
+
+  async function load() {
+    all = await (await fetch("/api/sessions?limit=500")).json();
+    fill($("f-track"), [...new Map(all.map((s) => [s.trackId, s.track])).entries()].sort((a, b) => a[1].localeCompare(b[1])));
+    fill($("f-player"), [...new Set(all.map((s) => s.player).filter(Boolean))].sort().map((p) => [p, p]));
+    render();
+  }
+  function fill(sel, pairs) {
+    const keep = sel.value;
+    sel.length = 1;
+    for (const [v, t] of pairs) sel.add(new Option(t, v));
+    sel.value = keep;
+  }
+  function render() {
+    const t = $("f-track").value, p = $("f-player").value;
+    const rows = all.filter((s) => (!t || String(s.trackId) === t) && (!p || s.player === p));
+    $("list").innerHTML = rows.map((s) => `
+      <tr data-id="${s.id}" tabindex="0">
+        <td>${fmtDate(s.startedAt)}</td>
+        <td class="name">${escapeHtml(s.player || "?")}</td>
+        <td class="name">${escapeHtml(s.track)}</td>
+        <td>${escapeHtml(s.type)}</td>
+        <td>${s.playerLaps}</td>
+        <td>${fmtLap(s.bestLapMs)}</td>
+      </tr>`).join("") || `<tr><td colspan="6">Még nincs mentett session${t || p ? " ezzel a szűréssel" : ". Menj ki a pályára, és egy teljes kör után itt megjelenik"}.</td></tr>`;
+  }
+  $("f-track").addEventListener("change", render);
+  $("f-player").addEventListener("change", render);
+  const open = (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) location.href = `/session.html?id=${tr.dataset.id}`; };
+  $("list").addEventListener("click", open);
+  $("list").addEventListener("keydown", (e) => e.key === "Enter" && open(e));
+  load();
+</script>
+</body>
+</html>

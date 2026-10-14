@@ -44,7 +44,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/feeds", s.listFeeds)
 	mux.HandleFunc("GET /api/feeds/{port}/live", s.liveSocket)
 	mux.HandleFunc("GET /api/sessions", s.listSessions)
+	mux.HandleFunc("GET /api/sessions/{id}", s.getSession)
 	mux.HandleFunc("GET /api/sessions/{id}/laps", s.sessionLaps)
+	mux.HandleFunc("GET /api/sessions/{id}/laps/{lap}/telemetry", s.lapTelemetry)
 	mux.HandleFunc("GET /api/me", s.me)
 	mux.HandleFunc("GET /api/team", s.listTeam)
 	mux.HandleFunc("PATCH /api/team/{id}", auth.RequireOwner(s.updateMember))
@@ -147,46 +149,6 @@ func (s *Server) liveSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-}
-
-func (s *Server) listSessions(w http.ResponseWriter, r *http.Request) {
-	if s.DB == nil {
-		writeJSON(w, []any{})
-		return
-	}
-	rows, err := s.DB.QueryContext(r.Context(), `
-		SELECT s.id, s.port, s.player_name, COALESCE(s.track_id, -1), COALESCE(s.session_type, 0),
-		       s.started_at, s.last_packet_at,
-		       COUNT(l.lap_num) FILTER (WHERE l.is_player),
-		       MIN(l.lap_time_ms) FILTER (WHERE l.is_player AND l.valid)
-		FROM sessions s LEFT JOIN laps l ON l.session_id = s.id
-		GROUP BY s.id ORDER BY s.started_at DESC LIMIT 100`)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-	defer rows.Close()
-	type row struct {
-		ID          int64     `json:"id"`
-		Port        int       `json:"port"`
-		Player      string    `json:"player"`
-		TrackID     int       `json:"trackId"`
-		SessionType int       `json:"sessionType"`
-		StartedAt   time.Time `json:"startedAt"`
-		LastPacket  time.Time `json:"lastPacketAt"`
-		PlayerLaps  int       `json:"playerLaps"`
-		BestLapMs   *int      `json:"bestLapMs"`
-	}
-	out := []row{}
-	for rows.Next() {
-		var x row
-		if err := rows.Scan(&x.ID, &x.Port, &x.Player, &x.TrackID, &x.SessionType, &x.StartedAt, &x.LastPacket, &x.PlayerLaps, &x.BestLapMs); err != nil {
-			httpError(w, err)
-			return
-		}
-		out = append(out, x)
-	}
-	writeJSON(w, out)
 }
 
 func (s *Server) sessionLaps(w http.ResponseWriter, r *http.Request) {

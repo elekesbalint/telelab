@@ -1,4 +1,8 @@
-// Command telelab-fakegame sends synthetic F1 26 packets: telelab-fakegame [host:port] [frames]
+// Command telelab-fakegame sends synthetic F1 26 packets at 20 Hz:
+//
+//	telelab-fakegame [host:port] [frames]
+//
+// FAKE_LAP_SECONDS shortens the simulated lap (default 80) for quick tests.
 package main
 
 import (
@@ -19,15 +23,17 @@ func main() {
 	if len(os.Args) > 2 {
 		frames, _ = strconv.Atoi(os.Args[2])
 	}
+	if s, err := strconv.ParseFloat(os.Getenv("FAKE_LAP_SECONDS"), 64); err == nil && s > 0 {
+		fake.LapSeconds = s
+	}
 	c, err := net.Dial("udp", to)
 	if err != nil {
 		panic(err)
 	}
 	for i := 0; i < frames; i++ {
-		for _, b := range fake.Frame(uint32(i), 45+float32(i)/20) {
+		for _, b := range fake.Frame(uint32(i), float32(i)/20) {
 			c.Write(b)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	c.Write([]byte("garbage"))
 }

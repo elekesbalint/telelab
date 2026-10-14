@@ -29,11 +29,11 @@ b, dd, td, .num { font-variant-numeric: tabular-nums; }
 .nav a { color: var(--dim); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
 .nav a:hover { color: var(--chalk); }
 .nav a[aria-current="page"] { color: var(--chalk); background: var(--panel); box-shadow: inset 0 -2px 0 var(--amber); }
-.me { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 14px; }
-.me img { width: 28px; height: 28px; border-radius: 50%; }
-.me form { margin: 0; }
-.me button, .btn { background: none; border: 1px solid var(--line); color: var(--chalk); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-.me button:hover, .btn:hover { border-color: var(--dim); }
+.userbox { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 14px; }
+.userbox img { width: 28px; height: 28px; border-radius: 50%; }
+.userbox form { margin: 0; }
+.userbox button, .btn { background: none; border: 1px solid var(--line); color: var(--chalk); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.userbox button:hover, .btn:hover { border-color: var(--dim); }
 .empty a, .page a { color: var(--amber); }
 .feed-pick select { background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: inherit; min-width: 220px; }
 .session { margin: 0; color: var(--dim); flex: 1; }
@@ -146,17 +146,8 @@ td.pit { color: var(--amber); }
 @media (max-width: 640px) {
   .bar, main { padding-left: 16px; padding-right: 16px; }
   .grid { grid-template-columns: 1fr; }
-  .nav { display: flex; gap: 4px; }
-.nav a { color: var(--dim); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
-.nav a:hover { color: var(--chalk); }
-.nav a[aria-current="page"] { color: var(--chalk); background: var(--panel); box-shadow: inset 0 -2px 0 var(--amber); }
-.me { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 14px; }
-.me img { width: 28px; height: 28px; border-radius: 50%; }
-.me form { margin: 0; }
-.me button, .btn { background: none; border: 1px solid var(--line); color: var(--chalk); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-.me button:hover, .btn:hover { border-color: var(--dim); }
-.empty a, .page a { color: var(--amber); }
-.feed-pick select { min-width: 0; width: 100%; }
+  .feed-pick select { min-width: 0; width: 100%; }
+  .nav { order: 3; width: 100%; overflow-x: auto; }
   .trace { height: 120px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -190,3 +181,57 @@ td.pit { color: var(--amber); }
 .who img, .who i { width: 28px; height: 28px; border-radius: 50%; background: var(--line); flex: none; }
 .who small { display: block; color: var(--dim); font-size: 12px; }
 .notice { color: var(--amber); min-height: 1.4em; }
+
+/* sessions & review */
+.back { margin: 0 0 4px; font-size: 14px; }
+.back a { color: var(--dim); text-decoration: none; }
+.back a::before { content: "‹ "; }
+.back a:hover { color: var(--chalk); }
+.filters { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.filters label, .pick label { display: grid; gap: 4px; color: var(--dim); font-size: 13px; }
+.filters select, .pick select { background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: inherit; min-width: 200px; max-width: 100%; }
+table.clickable tbody tr { cursor: pointer; }
+table.clickable tbody tr:hover td, table.clickable tbody tr:focus td { background: rgb(255 255 255 / .03); }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.panel-head h2 { margin: 0; }
+.primary { background: var(--amber); color: #2a1d05; border: 0; border-radius: 6px; padding: 8px 14px; font: 600 14px var(--text); cursor: pointer; }
+.primary:disabled { background: var(--line); color: var(--dim); cursor: default; }
+.laps tr.invalid td { color: var(--dim); }
+.laps input { accent-color: var(--amber); width: 16px; height: 16px; }
+.chart { width: 100%; }
+.uplot { font-family: var(--text); }
+.u-select { background: rgb(242 169 59 / .12); }
+
+/* compare */
+.cmp { max-width: 1600px; }
+.cmp-head { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 16px; margin: 8px 0 16px; }
+.lapcard { background: var(--panel); border-radius: 10px; padding: 16px 20px; border-top: 4px solid var(--k); }
+.lapcard.a { --k: var(--amber); } .lapcard.b { --k: var(--cold); }
+.lapcard h2, .verdict h2 { font: 600 18px/1.2 var(--num); margin: 0; display: flex; align-items: center; gap: 10px; }
+.tag { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--k); color: var(--asphalt); font: 700 14px var(--num); }
+.big { font: 600 38px/1.1 var(--num); margin: 6px 0 2px; }
+.meta { color: var(--dim); font-size: 13px; margin: 0; }
+.ka { color: var(--amber); } .kb { color: var(--cold); }
+.pick { margin-top: 12px; }
+.pick summary { cursor: pointer; color: var(--dim); font-size: 13px; }
+.pick[open] { display: grid; gap: 10px; }
+.pick .primary { justify-self: start; }
+.cmp-body { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+.charts { display: grid; gap: 10px; min-width: 0; }
+.chart-box { padding: 10px 14px 6px; }
+.chart-box h3 { font: 500 14px var(--text); color: var(--dim); margin: 0 0 4px; display: flex; justify-content: space-between; }
+.chart-box .val b { font: 600 15px var(--num); margin-left: 12px; }
+.map { position: sticky; top: 16px; }
+.map h2 { font-size: 16px; }
+.map canvas { width: 100%; height: 340px; display: block; }
+.legend-row { list-style: none; padding: 0; margin: 10px 0 0; display: flex; gap: 16px; font-size: 13px; color: var(--dim); }
+.legend-row li::before { content: ""; display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.legend-row .ka::before { background: var(--amber); } .legend-row .kb::before { background: var(--cold); }
+
+@media (max-width: 1100px) {
+  .cmp-head { grid-template-columns: 1fr 1fr; }
+  .verdict { grid-column: 1 / -1; }
+  .cmp-body { grid-template-columns: 1fr; }
+  .map { position: static; }
+}
+@media (max-width: 640px) { .cmp-head { grid-template-columns: 1fr; } }

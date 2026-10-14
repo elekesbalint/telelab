@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kör-összehasonlítás · TeleLab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/uPlot.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <nav class="nav" aria-label="Fő menü">
+    <a href="/">Élő</a><a href="/sessions.html" aria-current="page">Sessionök</a><a href="/connect.html">Csatlakozás</a><a href="/team.html">Csapat</a>
+  </nav>
+  <span class="session"></span>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="cmp">
+  <p class="back"><a id="back" href="/sessions.html">Vissza a sessionhöz</a></p>
+
+  <div class="cmp-head">
+    <section class="lapcard a" id="card-a"></section>
+    <section class="lapcard b" id="card-b"></section>
+    <section class="panel verdict" id="verdict"></section>
+  </div>
+
+  <div class="cmp-body">
+    <div class="charts" id="charts"></div>
+    <aside class="panel map">
+      <h2>Ki volt gyorsabb a pálya mentén</h2>
+      <canvas id="map" aria-label="Pályatérkép: a vonal színe mutatja, melyik kör nyert időt az adott szakaszon"></canvas>
+      <ul class="legend-row"><li class="ka">A nyert időt</li><li class="kb">B nyert időt</li></ul>
+      <dl class="kv" id="readout"></dl>
+    </aside>
+  </div>
+</main>
+<script src="vendor/uPlot.iife.min.js"></script>
+<script type="module" src="compare.js"></script>
+</body>
+</html>
