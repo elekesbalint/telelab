@@ -16,13 +16,12 @@ const REVIEW = [
   { href: "/sessions.html", label: "Session Review", match: ["/session.html"] },
   { href: "/compare.html", label: "Driver Comparison" },
   { href: "/laps.html", label: "Lap Leaderboard" },
-  { href: "/soon.html?t=Quali%20Leaderboard", label: "Quali Leaderboard", soon: true },
-  { href: "/soon.html?t=Stint%20Leaderboard", label: "Stint Leaderboard", soon: true },
-  { href: "/soon.html?t=Lap%20Tracker", label: "Lap Tracker", soon: true },
+  { href: "/quali.html", label: "Quali Leaderboard" },
+  { href: "/stints.html", label: "Stint Leaderboard" },
   { href: "/soon.html?t=Quali%20ERS%20Maps", label: "Quali ERS Maps", soon: true },
   { href: "/soon.html?t=Race%20ERS%20Maps", label: "Race ERS Maps", soon: true },
   { href: "/soon.html?t=Tyre%20Wear%20Maps", label: "Tyre Wear Maps", soon: true },
-  { href: "/soon.html?t=Team%20Database", label: "Team Database", soon: true },
+  { href: "/teamdb.html", label: "Team Database" },
   { href: "/gamedata.html", label: "F1 26 Game Data" },
 ];
 

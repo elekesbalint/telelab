@@ -89,6 +89,9 @@ Elkészült fázisok:
 | **Team** | `team.html` | Tagok listája. A tulajdonos itt állítja a szerepköröket és a portokat, és itt törölhet tagot. |
 | **F1 26 Game Data** | `gamedata.html` | Referencia-táblák: pályánkénti C-kiosztás, gumi-grip hőmérsékletre, motor-teljesítmény hőre, plusz a csapat futamaiból pit-loss, üzemanyag és gumikopás. |
 | **Lap Leaderboard** | `laps.html` | Pályánként a 5 leggyorsabb érvényes quali- és race-kör, a csapat pilótái közül. |
+| **Quali Leaderboard** | `quali.html` | Pályánként minden csapatpilóta legjobb Short Q (opcionálisan Q1–Q3) köre; akinek még nincs ideje, az is listázva van. |
+| **Stint Leaderboard** | `stints.html` | Pályánként a 5 leggyorsabb, legalább 50%-ban teljesített verseny, összesített idő szerint. |
+| **Team Database** | `teamdb.html` | Az összes saját kör kereshető listája: pilóta, pálya, típus, gumi, kör- és szektoridő szűrők. |
 | Login / Pending | `login.html`, `pending.html` | Belépés Discorddal. Aki még nincs jóváhagyva, egy várakozó oldalt lát. |
 
 ### Workbench-panelek
@@ -407,6 +410,10 @@ Minden végpont belépéshez kötött (kivéve `/healthz`). JSON-t ad vissza, `C
 | `GET /api/tracks/{id}` | Pálya-részlet: KPI-k, race stintek, compound statisztika, best-lap setupok. |
 | `GET /api/gamedata?driver=` | F1 26 referencia + csapatból számolt pit/fuel/wear aggregátumok. |
 | `GET /api/leaderboard/laps` | Lap leaderboard: top 5 quali/race kör pályánként. Szűrők: `kind, track, tyre, driver, type, q`. |
+| `GET /api/leaderboard/quali` | Quali leaderboard: pilótánként a legjobb Short Q (vagy `full=1` mellett Q1–Q3) egy pályán. Szűrők: `track, full, online`. |
+| `GET /api/leaderboard/stints` | Stint leaderboard: top 5 befejezett (≥50%) verseny pályánként. Szűrők: `track, driver, cond, online`. |
+| `GET /api/teamdb/laps` | Team Database: saját körök, szűrők `driver, track, type, tyre, lapMin/Max, s1–s3 Min/Max`. Legfeljebb 300 sor. |
+| `DELETE /api/sessions/{id}/laps/{lap}` | Egy saját kör (és a mintái) törlése a team database-ből. |
 | `GET /api/views` · `POST /api/views` · `PUT /api/views/{id}` · `DELETE /api/views/{id}` | Workbench-nézetek. A törzs: `{name, layout}`, legfeljebb 256 KB, a név legfeljebb 80 karakter. |
 | `GET /api/aliases` · `PUT /api/aliases` | Pilóta-aliasok: `{játékbeliNév: alias}`, aliasonként legfeljebb 40 karakter. |
 | `GET /api/team` | Tagok listája. |
@@ -825,11 +832,7 @@ go test ./internal/store/
 A felhasználó a sorrendet még nem rögzítette. A lista a SetupLab-funkciók még hiányzó részeit követi.
 
 1. **Gumikopás- és ERS-térképek:** a pályarajzra vetítve, hol kopik a gumi és hol tölt vagy hasznosít az ERS. Adat: `samples` (`ers_store`, `ers_mode`, pozíció). A gumikopáshoz a mintákba fel kell venni a Car Damage csomag kopás-mezőit is.
-2. **Ranglisták:**
-   - kör-ranglista: a csapat legjobb körei pályánként;
-   - időmérő-ranglista;
-   - stint-ranglista: átlagtempó stintenként, keverékenként.
-   A `laps` táblából számolhatók; a stintekhez a Session History stint-adatai kellenek.
+2. **Ranglisták:** a kör-, időmérő- és stint-ranglista, plusz a Team Database, kész (`laps.html`, `quali.html`, `stints.html`, `teamdb.html`).
 3. **Stratégiai modellek:** kopás és tempóvesztés keverékenként, boxkiállási ablakok, üzemanyag. Bemenet: a pilóták körei, kopásmintái, a garnitúrák.
 4. **Pálya-adatbázis:** pályánkénti adatok (hossz, kanyarok, DRS-zónák, szektorhatárok), mentett pályarajzok, hogy a térkép az első körtől látszódjon.
 5. **Mobilos mérnöki nézet:** egyszerűsített, telefonra szabott élő nézet.

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Database · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="lb">
+  <div class="lb-head">
+    <div>
+      <h1>Team Database</h1>
+      <p class="lead">Search every lap across all sessions. Filter by driver, track, session type, tyre, and lap / sector times.</p>
+    </div>
+  </div>
+  <form class="tdb-tools" id="form">
+    <select id="driver"><option value="">All drivers</option></select>
+    <select id="track"><option value="">All tracks</option></select>
+    <select id="stype"><option value="">All types</option></select>
+    <span class="ses-badge spec">F1 26</span>
+    <select id="tyre"><option value="">All tyres</option></select>
+    <label class="tdb-dur">Lap <input id="lapMin" placeholder="min" inputmode="decimal" autocomplete="off"> <input id="lapMax" placeholder="max" inputmode="decimal" autocomplete="off"></label>
+    <label class="tdb-dur">S1 <input id="s1Min" placeholder="min" inputmode="decimal" autocomplete="off"> <input id="s1Max" placeholder="max" inputmode="decimal" autocomplete="off"></label>
+    <label class="tdb-dur">S2 <input id="s2Min" placeholder="min" inputmode="decimal" autocomplete="off"> <input id="s2Max" placeholder="max" inputmode="decimal" autocomplete="off"></label>
+    <label class="tdb-dur">S3 <input id="s3Min" placeholder="min" inputmode="decimal" autocomplete="off"> <input id="s3Max" placeholder="max" inputmode="decimal" autocomplete="off"></label>
+    <button type="submit" class="ses-btn ses-btn-primary">Search</button>
+    <button type="button" class="btn" id="refresh">Refresh</button>
+    <button type="button" class="btn" id="clear">Clear</button>
+  </form>
+  <p class="lb-sum" id="sum"></p>
+  <div id="list"></div>
+</main>
+</div>
+<div class="trk-modal" id="modal" hidden>
+  <div class="trk-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header><h2 id="modal-title">Setup</h2><button type="button" class="btn" id="modal-close">×</button></header>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<script type="module" src="teamdb.js"></script>
+</body>
+</html>

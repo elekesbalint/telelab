@@ -236,7 +236,7 @@ func (f *Feed) sendClass(v *f1udp.PacketFinalClassificationData) {
 			"idx": i, "pos": int(c.Position), "laps": int(c.NumLaps),
 			"grid": int(c.GridPosition), "stops": int(c.NumPitStops),
 			"status": int(c.ResultStatus), "bestLapMs": int(c.BestLapTimeInMS),
-			"raceTime": c.TotalRaceTime, "tyres": tyres,
+			"raceTime": c.TotalRaceTime, "pen": int(c.PenaltiesTime), "tyres": tyres,
 		})
 	}
 	b, err := json.Marshal(map[string]any{"numCars": n, "cars": cars})

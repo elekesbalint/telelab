@@ -81,7 +81,6 @@ cd ~/telelab && GIT_SSH_COMMAND="ssh -i ~/.ssh/telelab" git pull && bash scripts
 - No firewall, no automatic DB backup, Synology archive not built yet.
 - Roadmap:
   - tyre-wear and ERS maps
-  - lap, quali and stint leaderboards
   - strategy models
   - track database
   - mobile engineer view

@@ -191,3 +191,24 @@ func (s *Server) lapLeaderboard(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(out.Types)
 	writeJSON(w, out)
 }
+
+func trackFilter(q interface{ Get(string) string }) (int, bool) {
+	s := q.Get("track")
+	n, err := strconv.Atoi(s)
+	return n, s != "" && err == nil
+}
+
+func onlineOK(filter string, on bool) bool {
+	switch filter {
+	case "online", "yes":
+		return on
+	case "offline", "no":
+		return !on
+	}
+	return true
+}
+
+func isShortQ(t int) bool { return t == 8 }
+func isMainQuali(t int) bool {
+	return t >= 5 && t <= 9 // Q1–Q3, Short Q, One-Shot Q
+}

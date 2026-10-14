@@ -983,5 +983,39 @@ body.has-side.wb-body .bar .brand { display: inline; }
 .lb-on { font: 700 10px var(--num); letter-spacing: .04em; text-transform: uppercase; }
 .lb-on.yes { color: var(--thr); }
 .lb-on.no { color: var(--dim); }
-.lb-view { display: flex; gap: 4px; justify-content: flex-end; }
+.lb-view { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
+.lb .lead { color: var(--dim); margin: 0; max-width: 92ch; font-size: 14px; }
+.lb-sum { color: var(--dim); margin: 0 0 10px; font-size: 13px; }
+.lb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lb-chip {
+  background: var(--panel); color: var(--dim); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 12px; font: 600 13px var(--text); cursor: pointer;
+}
+.lb-chip.on { border-color: var(--amber); color: var(--amber); }
+.lb-none { color: var(--dim); font-style: italic; }
+.lb-ok { color: var(--thr); font-weight: 700; }
+.lb-no { color: var(--brk); font-weight: 700; }
+.lb-pen { color: var(--brk); font-weight: 700; }
+.lb-cond { font: 700 10px var(--num); letter-spacing: .06em; text-transform: uppercase; }
+.lb-cond.dry { color: var(--chalk); }
+.lb-cond.inter { color: var(--inter); }
+.lb-cond.wet { color: var(--wet); }
+.lb-del { color: var(--brk); }
+.lb-table td.name { white-space: nowrap; }
+.dim { color: var(--dim); }
+.tdb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 16px; }
+.tdb-tools select {
+  background: var(--panel); color: var(--chalk); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 10px; font: inherit;
+}
+.tdb-dur {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--dim); font: 700 11px/1 var(--num); letter-spacing: .04em; text-transform: uppercase;
+}
+.tdb-dur input {
+  width: 72px; background: var(--panel); color: var(--chalk);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font: inherit;
+}
+.tdb-table a { color: var(--cold); text-decoration: none; }
+.tdb-table a:hover { text-decoration: underline; }
 @media (max-width: 720px) { .lb { padding: 12px; } }

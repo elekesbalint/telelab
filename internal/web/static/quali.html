@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quali Leaderboard · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="lb">
+  <div class="lb-head">
+    <div>
+      <h1>Quali Leaderboard</h1>
+      <p class="lead">Every team driver's quickest Short Q lap at one circuit, one row each. Drivers with no lap here are listed too, so you can see who still needs a run. Same laps and same eligibility rules as the Lap Leaderboard.</p>
+    </div>
+  </div>
+  <div class="lb-tools">
+    <span class="ses-badge spec">F1 26</span>
+    <div class="lb-chips" id="chips"></div>
+    <label class="ses-check"><input type="checkbox" id="full"> Include full qualifying (Q1/Q2/Q3)</label>
+    <select id="online">
+      <option value="">Both</option>
+      <option value="online">Online</option>
+      <option value="offline">Offline</option>
+    </select>
+    <button type="button" class="btn" id="refresh">Refresh</button>
+  </div>
+  <div id="list"></div>
+</main>
+</div>
+<div class="trk-modal" id="modal" hidden>
+  <div class="trk-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header><h2 id="modal-title">Setup</h2><button type="button" class="btn" id="modal-close">×</button></header>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<script type="module" src="quali.js"></script>
+</body>
+</html>
