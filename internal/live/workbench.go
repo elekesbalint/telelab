@@ -86,8 +86,15 @@ type WBCar struct {
 	Pits        uint8   `json:"pits"`
 	Penalties   uint8   `json:"penaltiesSec"`
 	Warnings    uint8   `json:"warnings"`
+	CornerCut   uint8   `json:"cornerCut"`
 	Invalid     bool    `json:"invalid"`
 	ERSMode     string  `json:"ersMode"`
+	ERSPct      float32 `json:"ersPct"`
+	Fuel        float32 `json:"fuel"`
+	MaxWear     float32 `json:"maxWear"`
+	WingFL      uint8   `json:"wingFL"`
+	WingFR      uint8   `json:"wingFR"`
+	WingRW      uint8   `json:"wingRW"`
 	X           float32 `json:"x"`
 	Z           float32 `json:"z"`
 	LapDistance float32 `json:"lapDistance"`
@@ -262,8 +269,8 @@ func (s *State) Workbench(focus int, slow bool) *WB {
 				CurLapMs: l.CurrentLapTimeInMS, CurS1: l.Sector1MS(), CurS2: l.Sector2MS(), Sector: l.Sector,
 				GapLeader: l.DeltaToRaceLeaderMS(), Interval: l.DeltaToCarInFrontMS(), SpeedTrap: l.SpeedTrapFastestSpeed,
 				Lap: l.CurrentLapNum, PitStatus: l.PitStatus, Pits: l.NumPitStops, Penalties: l.Penalties,
-				Warnings: l.TotalWarnings, Invalid: l.CurrentLapInvalid == 1, LapDistance: l.LapDistance,
-				Status: driverStatusText[l.DriverStatus]}
+				Warnings: l.TotalWarnings, CornerCut: l.CornerCuttingWarnings, Invalid: l.CurrentLapInvalid == 1,
+				LapDistance: l.LapDistance, Status: driverStatusText[l.DriverStatus]}
 			if l.PitStatus == 1 {
 				c.Status = "Pit lane"
 			} else if l.PitStatus == 2 {
@@ -317,6 +324,17 @@ func (s *State) Workbench(focus int, slow bool) *WB {
 				c.Actual = actualCompound[st.ActualTyreCompound]
 				c.TyreAge = st.TyresAgeLaps
 				c.ERSMode = f1udp.Name(f1udp.ERSDeployModeNames, st.ERSDeployMode)
+				c.ERSPct = ersPct(st.ERSStoreEnergy)
+				c.Fuel = st.FuelInTank
+			}
+			if s.Damage != nil {
+				dm := s.Damage.CarDamageData[i]
+				c.WingFL, c.WingFR, c.WingRW = dm.FrontLeftWingDamage, dm.FrontRightWingDamage, dm.RearWingDamage
+				for _, w := range dm.TyresWear {
+					if w > c.MaxWear {
+						c.MaxWear = w
+					}
+				}
 			}
 			if s.Motion != nil {
 				m := s.Motion.CarMotionData[i]

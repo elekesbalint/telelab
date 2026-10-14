@@ -1,5 +1,7 @@
 // TeleLab Driver View. Connects to /api/feeds/{port}/live and renders each snapshot (10 Hz).
 import { initNav, escapeHtml } from "./nav.js";
+import { mountFeedPick } from "./feed-pick.js";
+
 const $ = (id) => document.getElementById(id);
 const COMPOUND = { Soft: "var(--soft)", Medium: "var(--medium)", Hard: "var(--hard)", Inter: "var(--inter)", Wet: "var(--wet)" };
 const WEATHER = ["Clear", "Light cloud", "Overcast", "Light rain", "Heavy rain", "Storm"];
@@ -11,21 +13,28 @@ const DAMAGE = [
   ["frontLeftWing", "FL wing"], ["frontRightWing", "FR wing"], ["rearWing", "Rear wing"],
   ["floor", "Floor"], ["diffuser", "Diffuser"], ["sidepod", "Sidepod"],
 ];
+
 let ws = null;
 let currentPort = null;
 let lastUid = null;
 let publicIp = null;
 let myPort = null;
-let focusIdx = -1; // -1 until first snapshot; then car idx
+let focusIdx = -1;
 let msgCount = 0;
 let hz = 0;
+let picker = null;
 
 initNav().then((me) => {
   if (!me) return;
   publicIp = me.publicIp || null;
   myPort = me.udpPort ?? null;
   $("empty-ip").textContent = publicIp || location.hostname;
-  loadFeeds();
+  picker = mountFeedPick($("feed-pick"), {
+    preferredPort: myPort,
+    onChange: (port) => connect(port),
+  });
+  picker.refresh();
+  setInterval(() => picker?.refresh(), 5000);
 });
 
 const fmtGap = (ms) => (ms ? `+${(ms / 1000).toFixed(3)}` : "–");
@@ -34,36 +43,8 @@ const shortName = (n) => {
   return (parts.at(-1) || "?").toUpperCase().slice(0, 12);
 };
 
-async function loadFeeds() {
-  let feeds = [];
-  try { feeds = await (await fetch("/api/feeds")).json(); } catch { return; }
-  const sel = $("feed");
-  let saved = null;
-  try { saved = Number(localStorage.getItem("telelab.port")) || null; } catch {}
-  const prev = currentPort ?? saved ?? myPort;
-  sel.innerHTML = "";
-  for (const f of feeds) {
-    const o = document.createElement("option");
-    o.value = f.port;
-    const who = f.owner || f.player || "unknown";
-    o.textContent = f.active ? `${who}, ${f.track || "?"} (live)` : `${f.owner || "free port"} (${f.port})`;
-    sel.append(o);
-  }
-  const active = feeds.find((f) => f.active);
-  const pick = feeds.some((f) => f.port === prev) && prev != null ? prev : active ? active.port : feeds[0]?.port;
-  if (pick != null) {
-    sel.value = pick;
-    if (pick !== currentPort) connect(pick);
-  }
-}
-
-$("feed").addEventListener("change", (e) => {
-  const port = Number(e.target.value);
-  try { localStorage.setItem("telelab.port", port); } catch {}
-  connect(port);
-});
-
 function connect(port) {
+  if (port == null) return;
   currentPort = port;
   focusIdx = -1;
   if (ws) ws.close();
@@ -243,7 +224,6 @@ function renderCompound(p) {
 }
 
 function renderGap(p, focus) {
-  // Gaps come from the player's LapData; when focusing another car use their interval / leader gap.
   const gapAhead = focus.isPlayer ? p.gapAheadMs : focus.intervalMs;
   const gapLeader = focus.isPlayer ? p.gapLeaderMs : focus.gapLeaderMs;
   const pos = focus.position || p.position;
@@ -301,5 +281,3 @@ function renderPenalties(src) {
   $("penalties").className = "warn";
   $("penalties").textContent = `${sec} s time penalty · ${warn} warning${warn === 1 ? "" : "s"}`;
 }
-
-setInterval(loadFeeds, 5000);

@@ -99,7 +99,7 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.Damage = v
 	case *f1udp.PacketMotionData:
 		s.Motion = v
-		s.learnOutline(h.PlayerCarIndex)
+		s.learnOutline()
 	case *f1udp.PacketCarSetupData:
 		s.Setups = v
 	case *f1udp.PacketTyreSetsData:
@@ -126,28 +126,33 @@ func (s *State) Apply(h f1udp.Header, p any) {
 	}
 }
 
-// learnOutline stores the player's position at the current lap fraction.
-// The outline is kept across sessions on the same track (reset on track change).
-func (s *State) learnOutline(pi uint8) {
-	if s.Motion == nil || s.Lap == nil || s.Session == nil || int(pi) >= f1udp.MaxCars || s.Session.TrackLength == 0 {
+// learnOutline stores on-track positions by lap fraction. Every car contributes,
+// so the outline appears quickly even if the player is still in the garage.
+// Kept across sessions on the same track (reset on track change).
+func (s *State) learnOutline() {
+	if s.Motion == nil || s.Lap == nil || s.Session == nil || s.Session.TrackLength == 0 {
 		return
 	}
 	if s.outlineTrack != s.Session.TrackID {
 		s.outlineTrack = s.Session.TrackID
 		s.Outline, s.outlineSet = [OutlineBins][2]float32{}, [OutlineBins]bool{}
 	}
-	d := s.Lap.LapData[pi].LapDistance
-	if d < 0 || d >= float32(s.Session.TrackLength) {
-		return
-	}
-	if s.Lap.LapData[pi].PitStatus != 0 {
-		return // pit lane is not the racing line
-	}
-	b := int(d / float32(s.Session.TrackLength) * OutlineBins)
-	m := s.Motion.CarMotionData[pi]
-	if b >= 0 && b < OutlineBins && (m.WorldPositionX != 0 || m.WorldPositionZ != 0) {
-		s.Outline[b] = [2]float32{m.WorldPositionX, m.WorldPositionZ}
-		s.outlineSet[b] = true
+	tl := float32(s.Session.TrackLength)
+	for i := 0; i < f1udp.MaxCars; i++ {
+		l := s.Lap.LapData[i]
+		if l.ResultStatus < 2 || l.CarPosition == 0 || l.PitStatus != 0 {
+			continue
+		}
+		d := l.LapDistance
+		if d < 0 || d >= tl {
+			continue
+		}
+		b := int(d / tl * OutlineBins)
+		m := s.Motion.CarMotionData[i]
+		if b >= 0 && b < OutlineBins && (m.WorldPositionX != 0 || m.WorldPositionZ != 0) {
+			s.Outline[b] = [2]float32{m.WorldPositionX, m.WorldPositionZ}
+			s.outlineSet[b] = true
+		}
 	}
 }
 

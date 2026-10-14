@@ -1,5 +1,6 @@
 // TeleLab Workbench: a pit-wall dashboard built from movable panels.
 import { initNav, escapeHtml as esc } from "./nav.js";
+import { mountFeedPick, loadSavedPort } from "./feed-pick.js";
 import { PANELS, DEFAULT_VIEWS } from "./panels.js";
 
 const $ = (id) => document.getElementById(id);
@@ -222,17 +223,11 @@ function setFocus(idx) {
 }
 
 // ---------- feeds & data ----------
-async function loadFeeds() {
-  let feeds = [];
-  try { feeds = await (await fetch("/api/feeds")).json(); } catch { return; }
-  const sel = $("feed");
-  const prev = port ?? store.get("port", null) ?? me?.udpPort ?? null;
-  sel.innerHTML = feeds.map((f) => `<option value="${f.port}">${esc(alias(f.owner || f.player) || `Port ${f.port}`)}${f.active ? `, ${esc(f.track || "")} (live)` : f.owner ? "" : ` (${f.port})`}</option>`).join("");
-  const active = feeds.find((f) => f.active);
-  const pick = feeds.some((f) => f.port === prev) ? prev : active?.port ?? feeds[0]?.port;
-  if (pick != null) { sel.value = pick; if (pick !== port) connect(pick); }
-}
-$("feed").onchange = () => { store.set("port", Number($("feed").value)); connect(Number($("feed").value)); };
+const picker = mountFeedPick($("feed-pick"), {
+  preferredPort: loadSavedPort() ?? me?.udpPort ?? null,
+  onChange: (p) => connect(p),
+});
+async function loadFeeds() { await picker.refresh(); }
 
 function connect(p) {
   port = p;

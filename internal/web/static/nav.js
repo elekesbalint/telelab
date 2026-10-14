@@ -4,7 +4,7 @@ export const ROLE_NAME = { owner: "Owner", engineer: "Engineer", driver: "Driver
 const LIVE = [
   { href: "/workbench.html", label: "Workbench" },
   { href: "/", label: "Driver View", match: ["/", "/index.html"] },
-  { href: "/soon.html?t=Team%20Telem", label: "Team Telem", soon: true },
+  { href: "/team-telem.html", label: "Team Telem" },
   { href: "/soon.html?t=Weather", label: "Weather", soon: true },
   { href: "/soon.html?t=Mobile%20Engineer", label: "Mobile Engineer", soon: true },
   { href: "/connect.html", label: "How to Connect" },

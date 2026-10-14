@@ -122,7 +122,9 @@ export const PANELS = {
     title: "Track map", w: 4, h: 10,
     render(el, { d, slow, alias, setFocus, opts }) {
       if (!el.querySelector("canvas")) {
-        el.innerHTML = `<div class="map-tools"><label><input type="checkbox" data-opt="team"> Team names</label><label><input type="checkbox" data-opt="spot"> Selected only</label></div><canvas class="map-cv"></canvas>`;
+        el.innerHTML = `<div class="map-tools"><label><input type="checkbox" data-opt="team"> Team names</label><label><input type="checkbox" data-opt="spot"> Selected only</label></div>
+          <p class="map-hint" hidden>Track outline fills in as cars drive</p>
+          <canvas class="map-cv"></canvas>`;
         el.querySelectorAll("input[data-opt]").forEach((i) => { i.checked = !!opts[i.dataset.opt]; i.onchange = () => (opts[i.dataset.opt] = i.checked); });
         el.querySelector("canvas").onclick = (e) => {
           const hit = (el._dots || []).find((p) => Math.hypot(p.x - e.offsetX, p.y - e.offsetY) < 10);
@@ -130,26 +132,36 @@ export const PANELS = {
         };
       }
       const cv = el.querySelector("canvas");
+      const hint = el.querySelector(".map-hint");
       const dpr = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+      if (!w || !h) return;
       if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
       const ctx = cv.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       const outline = slow?.outline?.length ? slow.outline : el._outline || [];
       el._outline = outline;
-      const pts = outline.length > 20 ? outline : d.cars.map((c) => [c.x, c.z]);
+      const ready = outline.length >= 8;
+      const carPts = d.cars.filter((c) => c.x !== 0 || c.z !== 0).map((c) => [c.x, c.z]);
+      const pts = ready ? outline : carPts;
       if (!pts.length) return;
       const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
       const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
-      const pad = 34, sc = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxZ - minZ || 1));
+      const pad = 28, sc = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxZ - minZ || 1));
       const ox = (w - (maxX - minX) * sc) / 2, oy = (h - (maxZ - minZ) * sc) / 2;
       const P = (x, z) => [ox + (x - minX) * sc, h - (oy + (z - minZ) * sc)];
       const css = getComputedStyle(document.documentElement);
-      if (outline.length > 20) {
-        ctx.strokeStyle = css.getPropertyValue("--line"); ctx.lineWidth = 8; ctx.lineJoin = ctx.lineCap = "round";
-        ctx.beginPath(); outline.forEach(([x, z], i) => { const [a, b] = P(x, z); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); ctx.closePath(); ctx.stroke();
-      } else {
-        ctx.fillStyle = css.getPropertyValue("--dim"); ctx.font = "12px IBM Plex Sans"; ctx.fillText("The track outline is built from your first lap", 10, 18);
+      hint.hidden = ready;
+      if (ready) {
+        ctx.strokeStyle = css.getPropertyValue("--dim"); ctx.lineWidth = 10; ctx.lineJoin = ctx.lineCap = "round";
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath(); outline.forEach(([x, z], i) => { const [a, b] = P(x, z); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+        ctx.closePath(); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = css.getPropertyValue("--chalk"); ctx.lineWidth = 2.5; ctx.globalAlpha = 0.35;
+        ctx.beginPath(); outline.forEach(([x, z], i) => { const [a, b] = P(x, z); i ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+        ctx.closePath(); ctx.stroke();
+        ctx.globalAlpha = 1;
       }
       el._dots = [];
       ctx.font = "600 11px IBM Plex Sans";

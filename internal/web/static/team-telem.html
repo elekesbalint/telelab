@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Telem · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
+  <p class="conn" id="conn" data-state="off">Not connected</p>
+  <div class="userbox" id="me"></div>
+</header>
+
+<main class="tt page">
+  <nav class="tt-tabs" id="tabs" aria-label="Team Telem views">
+    <button type="button" data-tab="strategy" class="on">Race strategy</button>
+    <button type="button" data-tab="qtiming">Q timing table</button>
+    <button type="button" data-tab="timing">Timing table</button>
+    <button type="button" data-tab="vehicle">Vehicle status</button>
+    <button type="button" data-tab="rival">Rival</button>
+    <button type="button" data-tab="setup">Setup</button>
+    <button type="button" data-tab="inputs">Inputs</button>
+  </nav>
+
+  <p class="tt-meta" id="meta">Pick an active session above.</p>
+  <p class="tt-sum" id="sum" hidden></p>
+
+  <section class="empty" id="empty">
+    <h1>No live data</h1>
+    <p>Select an active session in the header, or start the game with UDP Format 2026.</p>
+  </section>
+
+  <div id="live" hidden>
+    <div class="tt-panel" data-show="strategy">
+      <div class="tt-grid">
+        <section class="panel tt-card tt-span2">
+          <h2>Weather forecast</h2>
+          <div id="tt-weather"></div>
+        </section>
+        <section class="panel tt-card tt-span2">
+          <h2>Rain prediction</h2>
+          <div id="tt-rain"></div>
+        </section>
+        <section class="panel tt-card tt-span4">
+          <h2>Tyres</h2>
+          <div class="tt-tyres" id="tt-tyres"></div>
+        </section>
+        <section class="panel tt-card tt-span2">
+          <h2>Race control</h2>
+          <label class="tt-filter"><input type="checkbox" id="tt-warn-only"> Show only warnings / penalties</label>
+          <ol class="tt-events" id="tt-events"></ol>
+        </section>
+        <section class="panel tt-card tt-span2">
+          <h2>Session</h2>
+          <dl class="dv-stats" id="tt-session"></dl>
+        </section>
+      </div>
+    </div>
+
+    <div class="tt-panel" data-show="qtiming" hidden>
+      <section class="panel">
+        <div class="table-wrap">
+          <table class="tt-table">
+            <thead><tr>
+              <th>Pos</th><th>Driver</th><th>Team</th><th>Best lap</th><th>Gap</th>
+              <th>S1</th><th>S2</th><th>S3</th><th>Speed</th><th>Laps</th><th>Tyre</th><th>Status</th>
+            </tr></thead>
+            <tbody id="tt-qtiming"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="tt-panel" data-show="timing" hidden>
+      <section class="panel" id="tt-race-wrap">
+        <div class="table-wrap">
+          <table class="tt-table">
+            <thead><tr>
+              <th>P</th><th>Driver</th><th>S1</th><th>S2</th><th>S3</th><th>Last lap</th>
+              <th>Gap</th><th>Int</th><th>Stops</th><th>Best lap</th><th>Tyre</th><th>Age</th>
+            </tr></thead>
+            <tbody id="tt-timing"></tbody>
+          </table>
+        </div>
+        <p class="tt-race-note" id="tt-race-note" hidden>Race timing is only available during race sessions.</p>
+      </section>
+    </div>
+
+    <div class="tt-panel" data-show="vehicle" hidden>
+      <section class="panel">
+        <h2>Lobby status — damage / ERS / penalties</h2>
+        <div class="table-wrap">
+          <table class="tt-table">
+            <thead><tr>
+              <th>P</th><th>Driver</th><th>FL wing</th><th>FR wing</th><th>Rear wing</th>
+              <th>ERS mode</th><th>ERS stored</th><th>Warnings (CC)</th><th>Penalties</th>
+            </tr></thead>
+            <tbody id="tt-vehicle"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="tt-panel" data-show="rival" hidden>
+      <div class="tt-grid">
+        <section class="panel tt-card tt-span4">
+          <div class="tt-rival-head">
+            <h2>Rival information</h2>
+            <label class="tt-rival-pick">Select rival
+              <select id="tt-rival"></select>
+            </label>
+          </div>
+          <div class="tt-rival-pair" id="tt-rival-info">
+            <p class="dv-muted">Select a rival to compare</p>
+            <p class="dv-muted">No car data</p>
+          </div>
+        </section>
+        <section class="panel tt-card tt-span4">
+          <h2>Lap times comparison</h2>
+          <canvas id="tt-rival-chart" class="tt-rival-chart" width="900" height="200"></canvas>
+          <ul class="legend-row"><li class="ka">Personal</li><li class="kb">Rival</li></ul>
+        </section>
+        <section class="panel tt-card tt-span4">
+          <h2>Rival comparison</h2>
+          <div class="table-wrap">
+            <table class="tt-table">
+              <thead><tr>
+                <th>Pos</th><th>Name</th><th>Best lap</th><th>Last lap</th><th>Stops</th>
+                <th>Tyre</th><th>Wear</th><th>ERS</th><th>Fuel</th>
+                <th>FL</th><th>FR</th><th>RW</th><th>Pen</th><th>Warn</th>
+              </tr></thead>
+              <tbody id="tt-rival-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="tt-panel" data-show="setup" hidden>
+      <section class="panel"><h2>Car setup</h2><div id="tt-setup"></div></section>
+    </div>
+
+    <div class="tt-panel" data-show="inputs" hidden>
+      <section class="panel">
+        <h2>Throttle &amp; brake</h2>
+        <canvas id="tt-trace" class="tt-trace" width="800" height="160"></canvas>
+      </section>
+    </div>
+  </div>
+</main>
+</div>
+<script type="module" src="team-telem.js"></script>
+</body>
+</html>
