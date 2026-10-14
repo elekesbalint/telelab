@@ -22,6 +22,7 @@ type WB struct {
 	Focus      *WBDetail   `json:"focus,omitempty"`
 	Player     *WBLap      `json:"player,omitempty"`
 	Events     []EventInfo `json:"events"`
+	Minis      []WBMini    `json:"minis"`
 	Slow       *WBSlow     `json:"slow,omitempty"`
 }
 
@@ -360,6 +361,12 @@ func (s *State) Workbench(focus int, slow bool) *WB {
 			}
 		}
 		wb.Player = pl
+	}
+
+	wb.Minis = []WBMini{}
+	for _, c := range wb.Cars {
+		mc := s.minis.cars[c.Idx]
+		wb.Minis = append(wb.Minis, WBMini{Idx: c.Idx, Cells: mc.cells, Current: mc.seg})
 	}
 
 	for _, e := range s.Recent {

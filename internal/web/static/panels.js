@@ -270,8 +270,28 @@ export const PANELS = {
     },
   },
 
+  minis: {
+    title: "Miniszektorok", w: 6, h: 9,
+    render(el, { d, alias, setFocus }) {
+      const rows = new Map((d.minis || []).map((m) => [m.idx, m]));
+      if (!d.cars.length) return (el.innerHTML = empty("Nincs autó a pályán."));
+      const n = 24;
+      const cls = ["", "slow", "pb", "purple"];
+      el.innerHTML = `<div class="lm-legend"><span class="ms purple"></span>leggyorsabb a mezőnyben <span class="ms pb"></span>egyéni csúcs <span class="ms cur"></span>itt jár most</div>
+        <div class="table-wrap"><table class="ms-table"><thead><tr><th>P</th><th>Pilóta</th>${Array.from({ length: n }, (_, i) => `<th>${i + 1}</th>`).join("")}</tr></thead><tbody>
+        ${d.cars.map((c) => {
+          const m = rows.get(c.idx);
+          const out = c.pitStatus === 2 || c.status === "Garázsban";
+          return `<tr data-focus="${c.idx}" class="${out ? "out" : ""} ${c.idx === d.focusIdx ? "focus" : ""}"><td>${c.position}</td>
+            <td class="name"><i class="teamc" style="background:${c.color || "var(--line)"}"></i>${esc(alias(c.name) !== c.name ? alias(c.name) : c.short)}</td>${
+            Array.from({ length: n }, (_, i) => `<td><span class="ms ${cls[m?.cells[i] ?? 0]} ${m && m.current === i ? "cur" : ""}"></span></td>`).join("")}</tr>`;
+        }).join("")}</tbody></table></div>`;
+      el.querySelector("tbody").onclick = (e) => { const tr = e.target.closest("tr[data-focus]"); if (tr) setFocus(Number(tr.dataset.focus)); };
+    },
+  },
+
   lapMatrix: {
-    title: "Kör-mátrix", w: 6, h: 8,
+    title: "Körök mátrixa", w: 6, h: 8,
     render(el, { d, slow, alias }) {
       const rows = slow?.lapMatrix;
       if (!rows?.length) return (el.innerHTML = empty("Még nincs befejezett kör."));
@@ -360,7 +380,7 @@ export const DEFAULT_VIEWS = [
     ["lap", 3, 4], ["weather", 5, 4], ["prediction", 2, 4], ["damage", 2, 4],
     ["timing", 8, 10], ["map", 4, 10],
     ["session", 2, 6], ["wear", 2, 6], ["spotlight", 3, 6], ["car", 2, 6], ["rain", 3, 6],
-    ["segments", 6, 8], ["lapMatrix", 6, 8], ["tyreSets", 6, 5], ["setup", 6, 5]] },
-  { name: "Időmérő", layout: [["lap", 3, 4], ["weather", 5, 4], ["prediction", 2, 4], ["damage", 2, 4], ["timing", 8, 10], ["map", 4, 10], ["segments", 7, 8], ["tyreSets", 5, 8]] },
-  { name: "Verseny", layout: [["lap", 3, 4], ["car", 3, 4], ["wear", 3, 4], ["damage", 3, 4], ["timing", 8, 10], ["map", 4, 10], ["lapMatrix", 8, 7], ["events", 4, 7], ["rain", 4, 5], ["spotlight", 4, 5], ["inputs", 4, 5]] },
+    ["segments", 6, 9], ["minis", 6, 9], ["tyreSets", 6, 5], ["setup", 6, 5]] },
+  { name: "Időmérő", layout: [["lap", 3, 4], ["weather", 5, 4], ["prediction", 2, 4], ["damage", 2, 4], ["timing", 8, 10], ["map", 4, 10], ["minis", 7, 9], ["segments", 5, 9], ["tyreSets", 12, 5]] },
+  { name: "Verseny", layout: [["lap", 3, 4], ["car", 3, 4], ["wear", 3, 4], ["damage", 3, 4], ["timing", 8, 10], ["map", 4, 10], ["minis", 8, 9], ["events", 4, 9], ["rain", 4, 5], ["spotlight", 4, 5], ["inputs", 4, 5]] },
 ];

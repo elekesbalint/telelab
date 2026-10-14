@@ -184,3 +184,17 @@ ol.ev time { display: block; color: var(--dim); font: 500 11px var(--num); }
   .wb-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .wb-panel { grid-column: span 6 !important; }
 }
+
+/* mini-sectors */
+.ms { display: inline-block; width: 100%; min-width: 16px; height: 16px; border-radius: 3px; background: rgb(255 255 255 / .04); vertical-align: middle; box-sizing: border-box; }
+.ms.purple { background: var(--purple); } .ms.pb { background: var(--thr); } .ms.slow { background: rgb(255 255 255 / .04); }
+.ms.cur { border: 1.5px solid var(--chalk); }
+.lm-legend .ms { width: 14px; min-width: 14px; height: 10px; }
+table.ms-table { border-collapse: separate; border-spacing: 2px 3px; width: 100%; table-layout: auto; }
+table.ms-table th { font-size: 10px; padding: 0; text-align: center; color: var(--dim); }
+table.ms-table td { border: 0; padding: 0; font-size: 13px; }
+table.ms-table td.name { padding-right: 6px; font-family: var(--num); white-space: nowrap; width: 1%; }
+table.ms-table td:first-child { width: 1%; padding-right: 4px; text-align: right; font-family: var(--num); }
+table.ms-table tbody tr { cursor: pointer; }
+table.ms-table tr.out td { opacity: .35; }
+table.ms-table tr.focus td.name { color: var(--amber); }

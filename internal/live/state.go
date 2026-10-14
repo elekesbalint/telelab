@@ -43,6 +43,7 @@ type State struct {
 	Recent     []TimedEvent  // last events for the web views, not consumed
 
 	outlineTrack int8
+	minis        miniState
 }
 
 // OutlineBins is the resolution of the learnt track outline.
@@ -56,7 +57,9 @@ type TimedEvent struct {
 
 // New returns an empty state.
 func New() *State {
-	return &State{Counts: map[f1udp.PacketID]uint64{}}
+	s := &State{Counts: map[f1udp.PacketID]uint64{}}
+	s.minis.reset()
+	return s
 }
 
 // Apply stores a decoded packet. A new SessionUID resets the per-session data.
@@ -69,6 +72,7 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.Telemetry, s.Telemetry2, s.Status, s.Damage = nil, nil, nil, nil
 		s.Motion, s.History = nil, [f1udp.MaxCars]*f1udp.PacketSessionHistoryData{}
 		s.Setups, s.TyreSets = nil, nil
+		s.minis.reset()
 		s.LastEvents, s.Recent = nil, nil
 	}
 	s.PlayerIdx = h.PlayerCarIndex
@@ -82,6 +86,9 @@ func (s *State) Apply(h f1udp.Header, p any) {
 		s.Participants = v
 	case *f1udp.PacketLapData:
 		s.Lap = v
+		if s.Session != nil {
+			s.minis.update(v, s.Session.TrackLength)
+		}
 	case *f1udp.PacketCarTelemetryData:
 		s.Telemetry = v
 	case *f1udp.PacketCarTelemetry2Data:
