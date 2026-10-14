@@ -150,10 +150,30 @@
     </div>
 
     <div class="tt-panel" data-show="inputs" hidden>
-      <section class="panel">
-        <h2>Throttle &amp; brake</h2>
-        <canvas id="tt-trace" class="tt-trace" width="800" height="160"></canvas>
-      </section>
+      <div class="tt-inputs">
+        <div class="tt-inputs-maps">
+          <section class="panel">
+            <h2>Track position</h2>
+            <canvas id="tt-map" class="tt-map-cv" width="400" height="320"></canvas>
+          </section>
+          <section class="panel">
+            <h2>Racing line</h2>
+            <canvas id="tt-zoom" class="tt-map-cv" width="400" height="220"></canvas>
+          </section>
+        </div>
+        <div class="tt-inputs-charts">
+          <p class="tt-scrub" id="tt-scrub">Move over the charts to scrub the lap</p>
+          <div class="tt-chart-stack" id="tt-chart-stack">
+            <div class="tt-chart-box" data-chart="thr"><h3>Throttle &amp; brake (%)</h3><canvas></canvas></div>
+            <div class="tt-chart-box" data-chart="steer"><h3>Steering (°)</h3><canvas></canvas></div>
+            <div class="tt-chart-box" data-chart="yaw"><h3>Yaw rate (°)</h3><canvas></canvas></div>
+            <div class="tt-chart-box" data-chart="spd"><h3>Speed (km/h)</h3><canvas></canvas></div>
+            <div class="tt-chart-box" data-chart="gear"><h3>Gear</h3><canvas></canvas></div>
+            <div class="tt-chart-box" data-chart="ers"><h3>ERS store (%)</h3><canvas></canvas></div>
+          </div>
+          <div class="tt-tip" id="tt-tip" hidden></div>
+        </div>
+      </div>
     </div>
   </div>
 </main>

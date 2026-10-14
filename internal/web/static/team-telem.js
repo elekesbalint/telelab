@@ -18,7 +18,11 @@ const me = await initNav();
 if (!me) throw new Error("auth");
 
 let ws = null, port = null, doc = null, slow = null, tab = "strategy", rivalIdx = -1;
-const trace = [];
+/** Current-lap input samples for the Inputs scrubber (distance-based). */
+const lapSamples = [];
+let scrubIdx = -1;
+let lastSampleLap = 0;
+let inputsBound = false;
 
 const picker = mountFeedPick($("feed-pick"), {
   preferredPort: loadSavedPort() ?? me.udpPort ?? null,
@@ -33,7 +37,7 @@ $("tabs").onclick = (e) => {
   tab = b.dataset.tab;
   for (const x of $("tabs").querySelectorAll("[data-tab]")) x.classList.toggle("on", x === b);
   for (const p of document.querySelectorAll(".tt-panel")) p.hidden = p.dataset.show !== tab;
-  if (tab === "inputs") drawTrace();
+  if (tab === "inputs") { bindInputs(); drawInputs(); }
   if (tab === "rival") { renderRival(); drawRivalChart(); }
 };
 
@@ -47,7 +51,7 @@ $("tt-rival").onchange = () => {
 function connect(p) {
   if (p == null) return;
   port = p;
-  doc = null; slow = null; rivalIdx = -1; trace.length = 0;
+  doc = null; slow = null; rivalIdx = -1; lapSamples.length = 0; scrubIdx = -1; lastSampleLap = 0;
   if (ws) { ws.onclose = null; ws.close(); }
   setConn("off", "Connecting…");
   showEmpty(true);
@@ -56,10 +60,7 @@ function connect(p) {
     const d = JSON.parse(e.data);
     if (d.slow) slow = d.slow;
     doc = d;
-    if (d.focus) {
-      trace.push({ thr: d.focus.throttle ?? 0, brk: d.focus.brake ?? 0, spd: d.focus.speed ?? 0 });
-      if (trace.length > 200) trace.shift();
-    }
+    pushInputSample(d);
     const stale = d.ageMs > 3000;
     setConn(stale ? "stale" : "live", stale ? `Last data ${Math.round(d.ageMs / 1000)} s ago` : "Live");
     showEmpty(!d.session);
@@ -120,8 +121,50 @@ function render() {
   renderVehicle();
   renderRival();
   renderSetup();
-  if (tab === "inputs") drawTrace();
+  if (tab === "inputs") { bindInputs(); drawInputs(); }
   if (tab === "rival") drawRivalChart();
+}
+
+function pushInputSample(d) {
+  const f = d.focus;
+  if (!f || f.restricted) return;
+  const dist = f.lapDistance ?? 0;
+  const lap = f.lap ?? 0;
+  if (lap && lap !== lastSampleLap) {
+    lapSamples.length = 0;
+    scrubIdx = -1;
+    lastSampleLap = lap;
+  }
+  if (dist < 0) return;
+  // Flashback / new lap: distance dropped a lot.
+  if (lapSamples.length && dist + 80 < lapSamples.at(-1).dist) {
+    lapSamples.length = 0;
+    scrubIdx = -1;
+  }
+  const last = lapSamples.at(-1);
+  if (last && Math.abs(last.dist - dist) < 0.8) {
+    Object.assign(last, sampleFromFocus(f));
+    return;
+  }
+  lapSamples.push(sampleFromFocus(f));
+  if (lapSamples.length > 8000) lapSamples.splice(0, lapSamples.length - 8000);
+}
+
+function sampleFromFocus(f) {
+  return {
+    dist: f.lapDistance ?? 0,
+    thr: f.throttle ?? 0,
+    brk: f.brake ?? 0,
+    steer: (f.steer ?? 0) * 180, // game steer is roughly -1..1
+    yaw: f.yawDeg ?? 0,
+    spd: f.speed ?? 0,
+    gear: f.gear ?? 0,
+    ers: f.ersPct ?? 0,
+    ersMode: f.ersMode || "",
+    name: f.name || "",
+    x: f.x ?? 0,
+    z: f.z ?? 0,
+  };
 }
 
 function renderWeather() {
@@ -391,43 +434,202 @@ function renderSetup() {
   ].join("")}</div>`;
 }
 
-function drawTrace() {
-  const cv = $("tt-trace");
-  if (!cv) return;
+function bindInputs() {
+  if (inputsBound) return;
+  const stack = $("tt-chart-stack");
+  if (!stack) return;
+  inputsBound = true;
+  const onMove = (e) => {
+    const box = e.currentTarget;
+    const cv = box.querySelector("canvas");
+    if (!cv || lapSamples.length < 2) return;
+    const rect = cv.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const i = Math.round((x / Math.max(rect.width, 1)) * (lapSamples.length - 1));
+    scrubIdx = Math.max(0, Math.min(lapSamples.length - 1, i));
+    drawInputs();
+  };
+  const onLeave = () => {
+    scrubIdx = -1;
+    drawInputs();
+  };
+  for (const box of stack.querySelectorAll(".tt-chart-box")) {
+    box.addEventListener("mousemove", onMove);
+    box.addEventListener("mouseleave", onLeave);
+  }
+}
+
+function drawInputs() {
+  drawInputCharts();
+  drawInputMaps();
+  paintScrub();
+}
+
+function paintScrub() {
+  const tip = $("tt-tip");
+  const scrub = $("tt-scrub");
+  const i = scrubIdx >= 0 ? scrubIdx : lapSamples.length - 1;
+  const s = lapSamples[i];
+  if (!s) {
+    scrub.textContent = "Drive a lap — charts fill from your live inputs";
+    tip.hidden = true;
+    return;
+  }
+  const gear = s.gear < 0 ? "R" : s.gear === 0 ? "N" : String(s.gear);
+  const line = `dist ${s.dist.toFixed(0)} m · Spd ${s.spd} · Thr ${(s.thr * 100).toFixed(0)}% · Brk ${(s.brk * 100).toFixed(0)}% · Gear ${gear} · Steer ${s.steer.toFixed(0)}° · Yaw ${s.yaw.toFixed(0)}° · ERS ${escapeHtml(s.ersMode)} ${s.ers.toFixed(0)}%`;
+  scrub.innerHTML = scrubIdx >= 0 ? `<b>${escapeHtml(s.name || "Driver")}</b> · ${line}` : line;
+  if (scrubIdx < 0) { tip.hidden = true; return; }
+  tip.hidden = false;
+  tip.innerHTML = `<b>${escapeHtml(s.name || "Driver")}</b> @ ${s.dist.toFixed(0)} m<br>
+    Spd ${s.spd} km/h · Thr ${(s.thr * 100).toFixed(0)}% · Brk ${(s.brk * 100).toFixed(0)}% · Gear ${gear}<br>
+    Steer ${s.steer.toFixed(0)}° · Yaw ${s.yaw.toFixed(0)}° · ERS ${escapeHtml(s.ersMode)} · Bat ${s.ers.toFixed(0)}%`;
+}
+
+function sizeCanvas(cv) {
   const dpr = devicePixelRatio || 1;
-  const w = cv.clientWidth || 800, h = cv.clientHeight || 160;
+  const w = cv.clientWidth || 400, h = cv.clientHeight || 88;
   if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
   const ctx = cv.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function drawInputCharts() {
   const css = getComputedStyle(document.documentElement);
-  if (trace.length < 2) {
-    ctx.fillStyle = css.getPropertyValue("--dim");
-    ctx.font = "13px IBM Plex Sans";
-    ctx.fillText("Waiting for inputs…", 12, 24);
-    return;
-  }
-  const pad = 10, ph = h - pad * 2;
-  const x = (i) => (i / (trace.length - 1)) * w;
-  const area = (key, color) => {
-    ctx.beginPath();
-    ctx.moveTo(0, h - pad);
-    trace.forEach((pt, i) => ctx.lineTo(x(i), h - pad - pt[key] * ph * 0.45));
-    ctx.lineTo(w, h - pad);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.4; ctx.fill(); ctx.globalAlpha = 1;
+  const n = lapSamples.length;
+  const X = (i, w, pad) => pad + (n < 2 ? 0 : (i / (n - 1)) * (w - pad * 2));
+  const scrubX = (w, pad) => {
+    const i = scrubIdx >= 0 ? scrubIdx : n - 1;
+    return n ? X(Math.max(0, i), w, pad) : null;
   };
-  area("thr", css.getPropertyValue("--thr"));
-  area("brk", css.getPropertyValue("--brk"));
-  ctx.beginPath();
-  trace.forEach((pt, i) => {
-    const y = h - pad - Math.min(pt.spd / 360, 1) * ph;
-    i ? ctx.lineTo(x(i), y) : ctx.moveTo(x(i), y);
-  });
-  ctx.strokeStyle = css.getPropertyValue("--chalk");
-  ctx.lineWidth = 2;
-  ctx.stroke();
+
+  const drawSeries = (box, series) => {
+    const cv = box.querySelector("canvas");
+    if (!cv) return;
+    const { ctx, w, h } = sizeCanvas(cv);
+    ctx.clearRect(0, 0, w, h);
+    const pad = 8;
+    if (n < 2) {
+      ctx.fillStyle = css.getPropertyValue("--dim");
+      ctx.font = "12px IBM Plex Sans";
+      ctx.fillText("Waiting for lap data…", 10, 20);
+      return;
+    }
+    for (const s of series) {
+      const vals = lapSamples.map((p) => s.val(p));
+      const lo = s.min ?? Math.min(...vals), hi = s.max ?? Math.max(...vals);
+      const span = hi - lo || 1;
+      const Y = (v) => h - pad - ((v - lo) / span) * (h - pad * 2);
+      ctx.beginPath();
+      lapSamples.forEach((p, i) => {
+        const x = X(i, w, pad), y = Y(s.val(p));
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.strokeStyle = s.color; ctx.lineWidth = 1.6; ctx.stroke();
+      if (s.fill) {
+        ctx.lineTo(X(n - 1, w, pad), h - pad); ctx.lineTo(X(0, w, pad), h - pad); ctx.closePath();
+        ctx.fillStyle = s.fill; ctx.globalAlpha = 0.22; ctx.fill(); ctx.globalAlpha = 1;
+      }
+    }
+    const sx = scrubX(w, pad);
+    if (sx != null) {
+      ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h);
+      ctx.strokeStyle = scrubIdx >= 0 ? css.getPropertyValue("--brk") : css.getPropertyValue("--cold");
+      ctx.lineWidth = scrubIdx >= 0 ? 1.5 : 1; ctx.stroke();
+    }
+  };
+
+  for (const box of document.querySelectorAll("#tt-chart-stack .tt-chart-box")) {
+    const kind = box.dataset.chart;
+    if (kind === "thr") {
+      drawSeries(box, [
+        { val: (p) => p.thr * 100, min: 0, max: 100, color: css.getPropertyValue("--cold"), fill: css.getPropertyValue("--cold") },
+        { val: (p) => p.brk * 100, min: 0, max: 100, color: css.getPropertyValue("--brk"), fill: css.getPropertyValue("--brk") },
+      ]);
+    } else if (kind === "steer") {
+      drawSeries(box, [{ val: (p) => p.steer, color: css.getPropertyValue("--cold") }]);
+    } else if (kind === "yaw") {
+      drawSeries(box, [{ val: (p) => p.yaw, color: css.getPropertyValue("--cold") }]);
+    } else if (kind === "spd") {
+      drawSeries(box, [{ val: (p) => p.spd, min: 0, max: 360, color: css.getPropertyValue("--chalk") }]);
+    } else if (kind === "gear") {
+      drawSeries(box, [{ val: (p) => p.gear, min: -1, max: 8, color: css.getPropertyValue("--amber") }]);
+    } else if (kind === "ers") {
+      drawSeries(box, [{ val: (p) => p.ers, min: 0, max: 100, color: css.getPropertyValue("--thr") }]);
+    }
+  }
+
+  // Position tooltip near the scrubber column of the stack.
+  const tip = $("tt-tip");
+  const stack = $("tt-chart-stack");
+  if (tip && stack && scrubIdx >= 0 && n > 1) {
+    const rect = stack.getBoundingClientRect();
+    const pad = 8;
+    const x = pad + (scrubIdx / (n - 1)) * (rect.width - pad * 2);
+    tip.style.left = `${Math.min(Math.max(8, x + 12), rect.width - 200)}px`;
+    tip.style.top = `40px`;
+  }
+}
+
+function mapProject(pts, w, h, pad = 18) {
+  if (!pts.length) return null;
+  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
+  const sc = Math.min((w - pad * 2) / (maxX - minX || 1), (h - pad * 2) / (maxZ - minZ || 1));
+  const ox = (w - (maxX - minX) * sc) / 2, oy = (h - (maxZ - minZ) * sc) / 2;
+  return (x, z) => [ox + (x - minX) * sc, h - (oy + (z - minZ) * sc)];
+}
+
+function drawInputMaps() {
+  const css = getComputedStyle(document.documentElement);
+  const outline = slow?.outline || [];
+  const i = scrubIdx >= 0 ? scrubIdx : lapSamples.length - 1;
+  const cur = lapSamples[i];
+  const trail = lapSamples.filter((p) => p.x || p.z).map((p) => [p.x, p.z]);
+  const pts = outline.length >= 8 ? outline : trail;
+
+  const drawMap = (cvId, zoom) => {
+    const cv = $(cvId);
+    if (!cv) return;
+    const { ctx, w, h } = sizeCanvas(cv);
+    ctx.clearRect(0, 0, w, h);
+    if (!pts.length) {
+      ctx.fillStyle = css.getPropertyValue("--dim");
+      ctx.font = "12px IBM Plex Sans";
+      ctx.fillText("Track outline builds as you drive", 12, 22);
+      return;
+    }
+    let view = pts;
+    if (zoom && cur && (cur.x || cur.z)) {
+      const r = 120;
+      view = pts.filter(([x, z]) => Math.hypot(x - cur.x, z - cur.z) < r);
+      if (view.length < 4) view = pts;
+    }
+    const P = mapProject(view, w, h);
+    if (!P) return;
+    ctx.strokeStyle = css.getPropertyValue("--dim");
+    ctx.lineWidth = zoom ? 3 : 6;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    view.forEach(([x, z], k) => { const [a, b] = P(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+    if (!zoom && outline.length >= 8) ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (trail.length > 1 && !zoom) {
+      ctx.beginPath();
+      trail.forEach(([x, z], k) => { const [a, b] = P(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+      ctx.strokeStyle = css.getPropertyValue("--cold"); ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (cur && (cur.x || cur.z)) {
+      const [a, b] = P(cur.x, cur.z);
+      ctx.beginPath(); ctx.arc(a, b, zoom ? 7 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = css.getPropertyValue("--cold"); ctx.fill();
+      ctx.strokeStyle = css.getPropertyValue("--chalk"); ctx.lineWidth = 2; ctx.stroke();
+    }
+  };
+  drawMap("tt-map", false);
+  drawMap("tt-zoom", true);
 }
 
 const fmtClock = (t) => {
@@ -437,7 +639,7 @@ const fmtClock = (t) => {
 
 requestAnimationFrame(function loop() {
   if (!$("live").hidden) {
-    if (tab === "inputs") drawTrace();
+    if (tab === "inputs") drawInputs();
     if (tab === "rival") drawRivalChart();
   }
   requestAnimationFrame(loop);

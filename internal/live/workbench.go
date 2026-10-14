@@ -112,6 +112,7 @@ type WBDetail struct {
 	Throttle   float32          `json:"throttle"`
 	Brake      float32          `json:"brake"`
 	Steer      float32          `json:"steer"`
+	YawDeg     float32          `json:"yawDeg"`
 	DRS        uint8            `json:"drs"`
 	DRSAllowed bool             `json:"drsAllowed"`
 	EngineTemp uint8            `json:"engineTemp"`
@@ -126,12 +127,17 @@ type WBDetail struct {
 	Fuel       float32          `json:"fuel"`
 	FuelLaps   float32          `json:"fuelLaps"`
 	ERSStoreMJ float32          `json:"ersStoreMJ"`
+	ERSPct     float32          `json:"ersPct"`
 	ERSMode    string           `json:"ersMode"`
 	ERSDeplMJ  float32          `json:"ersDeployedMJ"`
 	ERSHarvMJ  float32          `json:"ersHarvestedMJ"`
 	ERSLimitMJ float32          `json:"ersHarvestLimitMJ"`
 	Aero       string           `json:"aero"`
 	Overtake   string           `json:"overtake"`
+	X          float32          `json:"x"`
+	Z          float32          `json:"z"`
+	LapDist    float32          `json:"lapDistance"`
+	Lap        uint8            `json:"lap"`
 	Damage     map[string]uint8 `json:"damage"`
 }
 
@@ -417,9 +423,19 @@ func (s *State) detail(i int) *WBDetail {
 		d.Actual = actualCompound[st.ActualTyreCompound]
 		d.TyreAge, d.Fuel, d.FuelLaps = st.TyresAgeLaps, st.FuelInTank, st.FuelRemainingLaps
 		d.ERSStoreMJ, d.ERSMode = st.ERSStoreEnergy/1e6, f1udp.Name(f1udp.ERSDeployModeNames, st.ERSDeployMode)
+		d.ERSPct = ersPct(st.ERSStoreEnergy)
 		d.ERSDeplMJ = st.ERSDeployedThisLap / 1e6
 		d.ERSHarvMJ = (st.ERSHarvestedThisLapMGUK + st.ERSHarvestedThisLapMGUH) / 1e6
 		d.ERSLimitMJ = st.ERSHarvestLimitPerLap / 1e6
+	}
+	if s.Lap != nil && i >= 0 && i < f1udp.MaxCars {
+		d.LapDist = s.Lap.LapData[i].LapDistance
+		d.Lap = s.Lap.LapData[i].CurrentLapNum
+	}
+	if s.Motion != nil && i >= 0 && i < f1udp.MaxCars {
+		m := s.Motion.CarMotionData[i]
+		d.X, d.Z = m.WorldPositionX, m.WorldPositionZ
+		d.YawDeg = m.Yaw * (180 / 3.14159265)
 	}
 	if s.Telemetry2 != nil {
 		t2 := s.Telemetry2.CarTelemetry2Data[i]
