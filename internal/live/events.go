@@ -37,7 +37,22 @@ func describe(s *State, e f1udp.Event) string {
 	case f1udp.EventRaceWinner:
 		return fmt.Sprintf("Győztes: %s", name(e.VehicleIdx))
 	case f1udp.EventPenalty:
-		return fmt.Sprintf("Büntetés: %s (típus %d, szabálysértés %d, %d s, %d. kör)", name(e.VehicleIdx), e.PenaltyType, e.InfringementType, e.Time, e.LapNum)
+		pt, ok := penaltyTypesHU[e.PenaltyType]
+		if !ok {
+			pt = fmt.Sprintf("büntetés #%d", e.PenaltyType)
+		}
+		inf, ok := infringementsHU[e.InfringementType]
+		if !ok {
+			inf = fmt.Sprintf("szabálysértés #%d", e.InfringementType)
+		}
+		txt := fmt.Sprintf("%s: %s – %s", name(e.VehicleIdx), pt, inf)
+		if e.Time > 0 && e.Time < 255 {
+			txt += fmt.Sprintf(", %d mp", e.Time)
+		}
+		if e.LapNum > 0 && e.LapNum < 255 {
+			txt += fmt.Sprintf(", %d. kör", e.LapNum)
+		}
+		return txt
 	case f1udp.EventSpeedTrap:
 		return fmt.Sprintf("Sebességmérés: %s %.1f km/h", name(e.VehicleIdx), e.Speed)
 	case f1udp.EventStartLights:
