@@ -240,9 +240,19 @@ table.clickable tbody tr:hover td, table.clickable tbody tr:focus td { backgroun
 @media (max-width: 640px) { .cmp-head { grid-template-columns: 1fr; } }
 
 /* ---------- active session picker ---------- */
+/* Center the active-session picker in the top bar (SetupLab-style). */
+.bar:has(#feed-pick) { position: relative; justify-content: space-between; }
+.bar:has(#feed-pick) #feed-pick {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  z-index: 6;
+}
+.bar:has(#feed-pick) .session { margin-right: auto; max-width: 28vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar:has(#feed-pick) .conn { margin-left: auto; }
+.bar:has(#feed-pick) .userbox { margin-left: 0; }
+
 .feed-pick-ui { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; }
 .feed-pick-btn {
-  display: flex; align-items: center; gap: 10px; max-width: min(420px, 46vw);
+  display: flex; align-items: center; gap: 10px; max-width: min(440px, 52vw);
   background: var(--panel); color: var(--chalk); border: 1px solid var(--cold);
   border-radius: 8px; padding: 8px 12px; font: 500 13px var(--text); cursor: pointer; text-align: left;
 }
