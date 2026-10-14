@@ -1,6 +1,7 @@
 /* Workbench: dense pit-wall layout */
 .wb-body { min-height: 100vh; }
 .wb-body.nav-hidden #topbar { display: none; }
+.wb-body.nav-hidden #side { display: none; }
 .wb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--asphalt); z-index: 5; }
 .wb-select { background: var(--panel); color: var(--chalk); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 14px; max-width: 280px; }
 .wb-status { margin: 0; color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 8px; }

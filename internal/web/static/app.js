@@ -1,22 +1,25 @@
-// TeleLab live driver view. Connects to /api/feeds/{port}/live and renders
-// each snapshot (sent 10x per second).
-import { initNav } from "./nav.js";
-
+// TeleLab Driver View. Connects to /api/feeds/{port}/live and renders each snapshot (10 Hz).
+import { initNav, escapeHtml } from "./nav.js";
 const $ = (id) => document.getElementById(id);
 const COMPOUND = { Soft: "var(--soft)", Medium: "var(--medium)", Hard: "var(--hard)", Inter: "var(--inter)", Wet: "var(--wet)" };
-const COMPOUND_HU = { Soft: "Soft", Medium: "Medium", Hard: "Hard", Inter: "Intermediate", Wet: "Wet" };
-const ERS_HU = { None: "none", Medium: "medium", Hotlap: "hotlap", Boost: "boost" };
-const DAMAGE_HU = { frontLeftWing: "Front left wing", frontRightWing: "Front right wing", rearWing: "Rear wing", floor: "Floor", diffuser: "Diffuser", sidepod: "Sidepod", gearbox: "Gearbox", engine: "Engine" };
-const ERS_MAX_MJ = 4;
-const TRACE_SECONDS = 20;
-
+const WEATHER = ["Clear", "Light cloud", "Overcast", "Light rain", "Heavy rain", "Storm"];
+const WHEELS = [
+  { i: 2, label: "FL" }, { i: 3, label: "FR" },
+  { i: 0, label: "RL" }, { i: 1, label: "RR" },
+];
+const DAMAGE = [
+  ["frontLeftWing", "FL wing"], ["frontRightWing", "FR wing"], ["rearWing", "Rear wing"],
+  ["floor", "Floor"], ["diffuser", "Diffuser"], ["sidepod", "Sidepod"],
+];
 let ws = null;
 let currentPort = null;
-let trace = [];
-let sectorBests = {}; // carIdx -> {s1, s2}
 let lastUid = null;
 let publicIp = null;
 let myPort = null;
+let focusIdx = -1; // -1 until first snapshot; then car idx
+let msgCount = 0;
+let hz = 0;
+
 initNav().then((me) => {
   if (!me) return;
   publicIp = me.publicIp || null;
@@ -25,20 +28,15 @@ initNav().then((me) => {
   loadFeeds();
 });
 
-const fmtLap = (ms) => {
-  if (!ms) return "–";
-  const m = Math.floor(ms / 60000);
-  const s = ((ms % 60000) / 1000).toFixed(3);
-  return m ? `${m}:${s.padStart(6, "0")}` : s;
-};
 const fmtGap = (ms) => (ms ? `+${(ms / 1000).toFixed(3)}` : "–");
+const shortName = (n) => {
+  const parts = String(n || "").trim().split(/\s+/);
+  return (parts.at(-1) || "?").toUpperCase().slice(0, 12);
+};
 
-// ---------- feeds ----------
 async function loadFeeds() {
   let feeds = [];
-  try {
-    feeds = await (await fetch("/api/feeds")).json();
-  } catch { return; }
+  try { feeds = await (await fetch("/api/feeds")).json(); } catch { return; }
   const sel = $("feed");
   let saved = null;
   try { saved = Number(localStorage.getItem("telelab.port")) || null; } catch {}
@@ -52,7 +50,7 @@ async function loadFeeds() {
     sel.append(o);
   }
   const active = feeds.find((f) => f.active);
-  const pick = feeds.some((f) => f.port === prev) && (prev !== null) ? prev : active ? active.port : feeds[0]?.port;
+  const pick = feeds.some((f) => f.port === prev) && prev != null ? prev : active ? active.port : feeds[0]?.port;
   if (pick != null) {
     sel.value = pick;
     if (pick !== currentPort) connect(pick);
@@ -67,8 +65,7 @@ $("feed").addEventListener("change", (e) => {
 
 function connect(port) {
   currentPort = port;
-  trace = [];
-  sectorBests = {};
+  focusIdx = -1;
   if (ws) ws.close();
   setConn("off", "Connecting…");
   $("empty-port").textContent = port;
@@ -76,7 +73,10 @@ function connect(port) {
   showEmpty(true);
   const proto = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(`${proto}://${location.host}/api/feeds/${port}/live`);
-  ws.onmessage = (ev) => render(JSON.parse(ev.data));
+  ws.onmessage = (ev) => {
+    msgCount++;
+    render(JSON.parse(ev.data));
+  };
   ws.onclose = () => {
     if (currentPort !== port) return;
     setConn("off", "Connection lost, retrying…");
@@ -94,9 +94,14 @@ function showEmpty(empty) {
   $("live").hidden = empty;
 }
 
-// ---------- render ----------
+setInterval(() => {
+  hz = msgCount;
+  msgCount = 0;
+  if ($("hz") && !$("live").hidden) $("hz").textContent = `${hz} Hz`;
+}, 1000);
+
 function render(s) {
-  if (s.sessionUid !== lastUid) { lastUid = s.sessionUid; trace = []; sectorBests = {}; }
+  if (s.sessionUid !== lastUid) { lastUid = s.sessionUid; focusIdx = -1; }
   const stale = s.ageMs > 3000;
   setConn(stale ? "stale" : "live", stale ? `Last data ${Math.round(s.ageMs / 1000)} s ago` : "Live");
   const p = s.player;
@@ -104,169 +109,197 @@ function render(s) {
   if (!s.session || !p) return;
 
   const ses = s.session;
-  const parts = [ses.track, ses.type, ses.totalLaps > 1 ? `${ses.totalLaps} laps` : null,
-    `track ${ses.trackTemp} °C, air ${ses.airTemp} °C`, ses.rainPct ? `rain ${ses.rainPct}%` : null];
-  $("session").textContent = parts.filter(Boolean).join(", ");
+  const cars = s.cars || [];
+  if (focusIdx < 0) focusIdx = p.idx;
+  if (!cars.some((c) => c.idx === focusIdx)) focusIdx = p.idx;
+  const focus = cars.find((c) => c.idx === focusIdx) || { idx: p.idx, name: p.name, position: p.position, isPlayer: true };
 
-  // driving
-  $("speed").textContent = p.speed;
-  $("gear").textContent = p.gear < 0 ? "R" : p.gear === 0 ? "N" : p.gear;
-  const rpmPct = p.maxRpm ? Math.min(100, (p.rpm / p.maxRpm) * 100) : 0;
-  const rpmBar = $("rpm-bar");
-  rpmBar.style.width = `${rpmPct}%`;
-  rpmBar.classList.toggle("redline", rpmPct > 96);
-  $("rpm").textContent = p.rpm.toLocaleString("en-GB");
-  $("engine").textContent = `${p.engineTemp} °C`;
-  $("bias").textContent = p.brakeBias ? `${p.brakeBias}%` : "–";
-  $("thr-bar").style.width = `${p.throttle * 100}%`;
-  $("brk-bar").style.width = `${p.brake * 100}%`;
+  const weatherName = WEATHER[ses.weather] || "–";
+  const lapLabel = ses.totalLaps > 1 ? `Lap ${p.lap}/${ses.totalLaps}` : `Lap ${p.lap}`;
+  const left = ses.timeLeft != null ? `${Math.floor(ses.timeLeft / 60)}:${String(ses.timeLeft % 60).padStart(2, "0")}` : "";
+  $("session").textContent = [ses.track, ses.type, lapLabel].filter(Boolean).join(" · ");
+  $("meta").textContent = [ses.track, ses.type, lapLabel, left, `${weatherName} ${ses.airTemp}° air ${ses.trackTemp}° track`].filter(Boolean).join(" · ");
+  $("live-label").textContent = stale ? "STALE" : `LIVE · ${focus.name || "–"}`;
+  $("live-badge").dataset.state = stale ? "stale" : "live";
 
-  // timing
-  $("pos").textContent = p.position || "–";
-  $("lap").textContent = ses.totalLaps > 1 ? `Lap ${p.lap} / ${ses.totalLaps}` : `Lap ${p.lap}`;
-  $("cur").textContent = fmtLap(p.curLapMs);
-  $("invalid").hidden = !p.invalid;
-  $("s1").textContent = fmtLap(p.s1Ms);
-  $("s2").textContent = fmtLap(p.s2Ms);
-  $("sector").textContent = `Sector ${p.sector + 1}`;
-  trackSectors(s.cars);
-  colorSector($("s1").parentElement, p.idx, "s1", p.s1Ms);
-  colorSector($("s2").parentElement, p.idx, "s2", p.s2Ms);
-  $("last").textContent = fmtLap(p.lastLapMs);
-  $("best").textContent = fmtLap(p.bestLapMs);
-  $("gap").textContent = p.position > 1 ? fmtGap(p.gapAheadMs) : "–";
-  $("leader").textContent = p.position > 1 ? fmtGap(p.gapLeaderMs) : "–";
-  $("pen").textContent = `${p.penaltiesSec} s, ${p.warnings}`;
+  $("focus-name").textContent = focus.name || "–";
+  $("focus-pos").textContent = focus.position ? `P${focus.position}` : "–";
+  $("focus-note").hidden = focus.idx === p.idx;
 
-  // tyres: arrays are RL, RR, FL, FR
-  const comp = $("compound");
-  comp.textContent = COMPOUND_HU[p.compound] || p.compound || "–";
-  comp.style.setProperty("--c", COMPOUND[p.compound] || "var(--line)");
-  $("tyre-age").textContent = p.tyreAge ? `${p.tyreAge} laps` : "new";
-  for (let i = 0; i < 4; i++) {
-    const el = $(`t${i}`);
-    const surf = p.tyreSurface[i], inner = p.tyreInner[i];
-    el.style.setProperty("--t", surf < 80 ? "var(--cold)" : surf > 105 ? "var(--hot)" : "var(--thr)");
-    el.innerHTML = `<span class="where">${["Rear left", "Rear right", "Front left", "Front right"][i]}</span><div class="temp">${surf}<small> / ${inner}</small></div>
-      <div class="meta"><span class="wear">${(p.tyreWear?.[i] ?? 0).toFixed(1)}%</span><span>${p.brakeTemp[i]} °C</span></div>`;
+  renderDrivers(cars, focus.idx, p.idx);
+  renderWeather(ses, s.forecast || []);
+  renderTyreOpts(s.tyreOpts || []);
+  renderRelative(cars, focus);
+  renderDamage(p);
+  renderFuel(p);
+  renderCompound(p);
+  renderGap(p, focus);
+  renderEngine(p);
+  renderTemps(p);
+  renderWear(p);
+  renderPenalties(focus.isPlayer ? p : focus);
+}
+
+function renderDrivers(cars, focus, playerIdx) {
+  $("drivers").innerHTML = cars.map((c) => {
+    const cls = [
+      c.idx === focus ? "on" : "",
+      c.idx === playerIdx ? "me" : "",
+    ].filter(Boolean).join(" ");
+    return `<button type="button" class="dv-chip ${cls}" data-idx="${c.idx}" role="option" aria-selected="${c.idx === focus}">
+      <span class="p">P${c.position || "–"}</span>${escapeHtml(shortName(c.name))}</button>`;
+  }).join("");
+  $("drivers").onclick = (e) => {
+    const btn = e.target.closest("button[data-idx]");
+    if (!btn) return;
+    focusIdx = Number(btn.dataset.idx);
+  };
+}
+
+function weatherIcon(w) {
+  const sun = `<circle cx="12" cy="12" r="5" fill="var(--medium)"/>`;
+  const cloud = (fill) => `<path d="M7 18h10a4 4 0 0 0 0-8 5 5 0 0 0-9.6 1.4A3.3 3.3 0 0 0 7 18z" fill="${fill}"/>`;
+  const drops = (n) => Array.from({ length: n }, (_, i) => `<line x1="${8 + i * 4}" y1="20" x2="${7 + i * 4}" y2="23" stroke="var(--wet)" stroke-width="1.6" stroke-linecap="round"/>`).join("");
+  const body = [sun, sun + cloud("var(--dim)"), cloud("var(--dim)"), cloud("var(--dim)") + drops(2),
+    cloud("var(--line)") + drops(3), cloud("var(--line)") + drops(3)][w] || sun;
+  return `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">${body}</svg>`;
+}
+
+function renderWeather(ses, forecast) {
+  const now = forecast[0];
+  const rain = now?.rain ?? ses.rainPct ?? 0;
+  const head = `<div class="dv-wx-now">
+    <div>${weatherIcon(ses.weather)}<b>${escapeHtml(WEATHER[ses.weather] || "–")}</b></div>
+    <div class="dv-wx-temps"><span>Track ${ses.trackTemp}°C</span><span>Air ${ses.airTemp}°C</span><span>Rain ${rain}%</span></div>
+  </div>`;
+  const row = forecast.length
+    ? `<div class="dv-wx-row">${forecast.slice(0, 7).map((f) =>
+      `<div class="dv-wx"><span>+${f.offset}m</span>${weatherIcon(f.weather)}<b>${f.rain}%</b></div>`).join("")}</div>`
+    : `<p class="dv-muted">No forecast samples yet.</p>`;
+  $("weather").innerHTML = head + row;
+}
+
+function renderTyreOpts(opts) {
+  if (!opts.length) {
+    $("tyreopts").innerHTML = `<p class="dv-muted">Tyre set data is only sent for your own car.</p>`;
+    return;
   }
+  const label = { dry: "Dry", inter: "Inter", wet: "Wet" };
+  $("tyreopts").innerHTML = opts.map((o) => {
+    const delta = o.fastest ? "fastest" : `${o.deltaMs >= 0 ? "+" : "−"}${(Math.abs(o.deltaMs) / 1000).toFixed(1)}s`;
+    return `<div class="dv-topt ${o.fastest ? "fast" : ""}" style="--c:${COMPOUND[o.visual] || "var(--line)"}">
+      <span class="kind">${label[o.kind] || o.kind}</span>
+      <b>${escapeHtml(o.actual || o.visual)}</b>
+      <em>${delta}</em>
+    </div>`;
+  }).join("");
+}
 
-  // energy
-  $("ers").textContent = `${p.ersStoreMJ.toFixed(2)} MJ`;
-  $("ers-mode").textContent = ERS_HU[p.ersMode] || p.ersMode;
-  $("ers-bar").style.width = `${Math.min(100, (p.ersStoreMJ / ERS_MAX_MJ) * 100)}%`;
-  $("ers-lap").textContent = `This lap: ${p.ersDeployedMJ.toFixed(2)} MJ deployed, ${p.ersHarvestedMJ.toFixed(2)} MJ harvested`;
-  $("fuel").textContent = `${p.fuel.toFixed(2)} kg`;
+function renderRelative(cars, focus) {
+  const sorted = [...cars].sort((a, b) => a.position - b.position);
+  const i = sorted.findIndex((c) => c.idx === focus.idx);
+  const ahead = i > 0 ? sorted[i - 1] : null;
+  const behind = i >= 0 && i < sorted.length - 1 ? sorted[i + 1] : null;
+  const block = (title, c) => {
+    if (!c) return `<div class="dv-rel-col"><span class="lab">${title}</span><b class="empty">–</b></div>`;
+    return `<div class="dv-rel-col">
+      <span class="lab">${title}</span>
+      <b>P${c.position} ${escapeHtml(shortName(c.name))}</b>
+      <div class="dv-rel-meta">
+        <span>ERS <em>${Math.round(c.ersPct ?? 0)}%</em></span>
+        <i class="dv-ers"><b style="width:${Math.min(100, c.ersPct || 0)}%"></b></i>
+        <span>${escapeHtml(c.compound || "–")} ${c.tyreAge ?? 0}L</span>
+        <span>Wear ${Number(c.maxWear ?? 0).toFixed(0)}%</span>
+      </div>
+    </div>`;
+  };
+  $("relative").innerHTML = block("Ahead", ahead) + block("Behind", behind);
+}
+
+function renderDamage(p) {
+  const dm = p.damage || {};
+  $("damage").innerHTML = DAMAGE.map(([k, n]) => {
+    const v = dm[k] ?? 0;
+    const cls = v >= 30 ? "bad" : v > 0 ? "warn" : "ok";
+    return `<div class="${cls}"><span>${n}</span><b>${v > 0 ? v + "%" : "OK"}</b></div>`;
+  }).join("");
+}
+
+function renderFuel(p) {
   const fl = p.fuelLaps;
-  $("fuel-laps").textContent = `${fl >= 0 ? "+" : ""}${fl.toFixed(2)} laps`;
-  $("fuel-laps").style.color = fl < 0 ? "var(--brk)" : "";
-  $("fuel-mix").textContent = `Fuel mix: ${["lean", "standard", "rich", "max"][p.fuelMix] ?? "–"}`;
-  $("f-aero").className = p.aeroStraight ? "on" : p.aeroAvailable ? "ready" : "";
-  $("f-aero").textContent = p.aeroStraight ? "Aero: straight mode" : "Aero: corner mode";
-  $("f-ot").className = p.overtakeActive ? "on" : p.overtakeAvailable ? "ready" : "";
-  $("f-drs").className = p.drs ? "on" : "";
-  const dmg = Object.entries(p.damage || {}).filter(([, v]) => v > 0);
-  $("damage").innerHTML = dmg.length
-    ? dmg.map(([k, v]) => `<div><dt>${DAMAGE_HU[k] || k}</dt><dd>${v}%</dd></div>`).join("")
-    : `<div><dt>Damage</dt><dd>none</dd></div>`;
-
-  renderCars(s.cars);
-  renderEvents(s.events);
-  pushTrace(p);
+  const color = fl < 0 ? "bad" : "good";
+  $("fuel").innerHTML = `
+    <div><dt>Fuel in laps</dt><dd class="${color}">${fl.toFixed(2)}</dd></div>
+    <div><dt>Burn / lap</dt><dd>–</dd></div>
+    <div><dt>Burn last lap</dt><dd>–</dd></div>
+    <div><dt>At finish</dt><dd class="${color}">${fl.toFixed(2)}</dd></div>`;
 }
 
-function trackSectors(cars) {
-  for (const c of cars) {
-    const b = (sectorBests[c.idx] ??= { s1: 0, s2: 0 });
-    if (c.s1Ms && (!b.s1 || c.s1Ms < b.s1)) b.s1 = c.s1Ms;
-    if (c.s2Ms && (!b.s2 || c.s2Ms < b.s2)) b.s2 = c.s2Ms;
+function renderCompound(p) {
+  const c = p.compound || "–";
+  $("tyres-compound").innerHTML = `
+    <span class="dv-comp" style="--c:${COMPOUND[c] || "var(--line)"}">${escapeHtml(c)}</span>
+    <p class="dv-muted">Age: ${p.tyreAge ? `${p.tyreAge} laps` : "new"} · ${escapeHtml(p.actual || "")}</p>`;
+}
+
+function renderGap(p, focus) {
+  // Gaps come from the player's LapData; when focusing another car use their interval / leader gap.
+  const gapAhead = focus.isPlayer ? p.gapAheadMs : focus.intervalMs;
+  const gapLeader = focus.isPlayer ? p.gapLeaderMs : focus.gapLeaderMs;
+  const pos = focus.position || p.position;
+  $("gap").innerHTML = `
+    <b class="dv-big">${pos === 1 ? "Leader" : fmtGap(gapAhead)}</b>
+    <p class="dv-muted">Leader: ${pos === 1 ? "–" : fmtGap(gapLeader)}</p>`;
+}
+
+function renderEngine(p) {
+  const t = p.engineTemp;
+  const cls = t >= 130 ? "bad" : t >= 110 ? "warn" : "good";
+  $("engine").innerHTML = `
+    <b class="dv-big ${cls}">${t}°C</b>
+    <p class="dv-muted">ICE: ${Math.round(p.powerIceKW || 0)} kW · MGU-K: ${Math.round(p.powerMgukKW || 0)} kW</p>`;
+}
+
+function tempClass(t) {
+  if (t < 70) return "cold";
+  if (t > 105) return "hot";
+  return "ok";
+}
+
+function renderTemps(p) {
+  $("temps").innerHTML = WHEELS.map(({ i, label }) => {
+    const inner = p.tyreInner?.[i] ?? 0;
+    const surf = p.tyreSurface?.[i] ?? 0;
+    return `<div class="dv-temp ${tempClass(inner)}">
+      <span>${label}</span><b>${inner}°C</b><small>Surface ${surf}°C</small></div>`;
+  }).join("");
+}
+
+function wearClass(w) {
+  if (w >= 60) return "bad";
+  if (w >= 30) return "warn";
+  return "ok";
+}
+
+function renderWear(p) {
+  $("wear").innerHTML = WHEELS.map(({ i, label }) => {
+    const w = p.tyreWear?.[i] ?? 0;
+    const left = Math.max(0, 100 - w);
+    return `<div class="dv-wearbar ${wearClass(w)}">
+      <span>${label}</span><i><b style="width:${left}%"></b></i><em>${w.toFixed(0)}%</em></div>`;
+  }).join("");
+}
+
+function renderPenalties(src) {
+  const sec = src.penaltiesSec ?? 0;
+  const warn = src.warnings ?? 0;
+  if (!sec && !warn) {
+    $("penalties").textContent = "No penalties";
+    $("penalties").className = "dv-muted";
+    return;
   }
+  $("penalties").className = "warn";
+  $("penalties").textContent = `${sec} s time penalty · ${warn} warning${warn === 1 ? "" : "s"}`;
 }
-function colorSector(el, idx, key, ms) {
-  el.className = "";
-  if (!ms) return;
-  const overall = Math.min(...Object.values(sectorBests).map((b) => b[key] || Infinity));
-  const own = sectorBests[idx]?.[key] || Infinity;
-  el.className = ms <= overall ? "purple" : ms <= own ? "pb" : "slow";
-}
-
-function renderCars(cars) {
-  const fastest = Math.min(...cars.map((c) => c.bestLapMs || Infinity));
-  $("cars").innerHTML = cars.map((c) => `
-    <tr class="${c.isPlayer ? "me" : ""}">
-      <td>${c.position}</td>
-      <td class="name">${escapeHtml(c.name || `#${c.idx}`)}</td>
-      <td>${c.position === 1 ? "Leader" : fmtGap(c.gapLeaderMs)}</td>
-      <td>${c.position === 1 ? "–" : fmtGap(c.intervalMs)}</td>
-      <td>${fmtLap(c.lastLapMs)}</td>
-      <td class="${c.bestLapMs && c.bestLapMs === fastest ? "purple" : ""}">${fmtLap(c.bestLapMs)}</td>
-      <td><span class="dot" style="--c:${COMPOUND[c.compound] || "var(--line)"}"></span>${c.tyreAge} laps</td>
-      <td class="${c.pitStatus ? "pit" : ""}">${c.pitStatus ? "in pits" : c.pits}</td>
-      <td>${ERS_HU[c.ersMode] || "–"}</td>
-    </tr>`).join("");
-}
-
-function renderEvents(events) {
-  const list = [...events].reverse();
-  $("events").innerHTML = list.length
-    ? list.map((e) => `<li class="${["PENA", "COLL", "SCAR", "RDFL"].includes(e.code) ? "hot" : ""}"><time>${fmtClock(e.t)}</time>${escapeHtml(e.text)}</li>`).join("")
-    : `<li>Nothing has happened in this session yet.</li>`;
-}
-const fmtClock = (t) => {
-  const m = Math.floor(t / 60), s = Math.floor(t % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
-};
-const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-// ---------- trace ----------
-function pushTrace(p) {
-  const now = performance.now();
-  trace.push({ t: now, speed: p.speed, thr: p.throttle, brk: p.brake });
-  while (trace.length && now - trace[0].t > TRACE_SECONDS * 1000) trace.shift();
-}
-
-const canvas = $("trace");
-const ctx = canvas.getContext("2d");
-function drawTrace() {
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (canvas.width !== w * dpr || canvas.height !== h * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  const css = getComputedStyle(document.documentElement);
-  const now = performance.now();
-  const x = (t) => w - ((now - t) / (TRACE_SECONDS * 1000)) * w;
-  const pad = 12, ph = h - pad * 2;
-
-  ctx.strokeStyle = css.getPropertyValue("--line");
-  ctx.lineWidth = 1;
-  for (let s = 5; s < TRACE_SECONDS; s += 5) {
-    const gx = Math.round(w - (s / TRACE_SECONDS) * w) + 0.5;
-    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
-  }
-  if (trace.length > 1) {
-    const area = (key, color) => {
-      ctx.beginPath();
-      ctx.moveTo(x(trace[0].t), h - pad);
-      for (const pt of trace) ctx.lineTo(x(pt.t), h - pad - pt[key] * ph * 0.45);
-      ctx.lineTo(x(trace[trace.length - 1].t), h - pad);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1;
-    };
-    area("thr", css.getPropertyValue("--thr"));
-    area("brk", css.getPropertyValue("--brk"));
-    ctx.beginPath();
-    trace.forEach((pt, i) => {
-      const y = h - pad - Math.min(pt.speed / 360, 1) * ph;
-      i ? ctx.lineTo(x(pt.t), y) : ctx.moveTo(x(pt.t), y);
-    });
-    ctx.strokeStyle = css.getPropertyValue("--chalk");
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-  requestAnimationFrame(drawTrace);
-}
-requestAnimationFrame(drawTrace);
 
 setInterval(loadFeeds, 5000);

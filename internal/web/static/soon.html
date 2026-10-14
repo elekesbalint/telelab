@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coming soon · TeleLab by Bálint Elekes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
+<header class="bar">
+  <a class="brand" href="/">Tele<span>Lab</span></a>
+  <span class="session"></span>
+  <div class="userbox" id="me"></div>
+</header>
+<main class="page">
+  <h1 id="title">Coming soon</h1>
+  <p class="lead">This section is on the roadmap. Driver View and Workbench are ready now; the rest will land one by one.</p>
+  <p><a class="btn" href="/">Back to Driver View</a></p>
+</main>
+</div>
+<script type="module">
+import { initNav } from "./nav.js";
+initNav();
+const t = new URLSearchParams(location.search).get("t");
+if (t) {
+  document.title = `${t} · TeleLab by Bálint Elekes`;
+  document.getElementById("title").textContent = t;
+}
+</script>
+</body>
+</html>

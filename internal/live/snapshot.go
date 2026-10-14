@@ -9,12 +9,32 @@ import (
 
 // Snapshot is the JSON document pushed to the live web views.
 type Snapshot struct {
-	SessionUID string       `json:"sessionUid"`
-	AgeMs      int64        `json:"ageMs"` // time since the last packet
-	Session    *SessionInfo `json:"session,omitempty"`
-	Player     *PlayerInfo  `json:"player,omitempty"`
-	Cars       []CarRow     `json:"cars"`
-	Events     []EventInfo  `json:"events"`
+	SessionUID string            `json:"sessionUid"`
+	AgeMs      int64             `json:"ageMs"` // time since the last packet
+	Session    *SessionInfo      `json:"session,omitempty"`
+	Player     *PlayerInfo       `json:"player,omitempty"`
+	Cars       []CarRow          `json:"cars"`
+	Events     []EventInfo       `json:"events"`
+	Forecast   []ForecastSample  `json:"forecast"`
+	TyreOpts   []TyreOpt         `json:"tyreOpts"`
+}
+
+// ForecastSample is one weather forecast point for the current session type.
+type ForecastSample struct {
+	Offset    uint8 `json:"offset"`
+	Weather   uint8 `json:"weather"`
+	Rain      uint8 `json:"rain"`
+	TrackTemp int8  `json:"trackTemp"`
+	AirTemp   int8  `json:"airTemp"`
+}
+
+// TyreOpt is the best available set in a weather class (dry / inter / wet).
+type TyreOpt struct {
+	Kind   string `json:"kind"` // dry, inter, wet
+	Actual string `json:"actual"`
+	Visual string `json:"visual"`
+	DeltaMs int16 `json:"deltaMs"`
+	Fastest bool  `json:"fastest"`
 }
 
 type SessionInfo struct {
@@ -75,16 +95,20 @@ type PlayerInfo struct {
 	TyreWear   [4]float32 `json:"tyreWear"`
 
 	Compound   string  `json:"compound"`
+	Actual     string  `json:"actual"`
 	TyreAge    uint8   `json:"tyreAge"`
 	Fuel       float32 `json:"fuel"`
 	FuelLaps   float32 `json:"fuelLaps"`
 	FuelMix    uint8   `json:"fuelMix"`
 	BrakeBias  uint8   `json:"brakeBias"`
 	ERSStoreMJ float32 `json:"ersStoreMJ"`
+	ERSPct     float32 `json:"ersPct"`
 	ERSMode    string  `json:"ersMode"`
 	ERSDeplMJ  float32 `json:"ersDeployedMJ"`
 	ERSHarvMJ  float32 `json:"ersHarvestedMJ"`
 	ERSLimitMJ float32 `json:"ersHarvestLimitMJ"`
+	PowerICE   float32 `json:"powerIceKW"`
+	PowerMGUK  float32 `json:"powerMgukKW"`
 
 	AeroStraight   bool `json:"aeroStraight"`
 	AeroAvailable  bool `json:"aeroAvailable"`
@@ -109,13 +133,16 @@ type CarRow struct {
 	GapLeader uint32  `json:"gapLeaderMs"`
 	Interval  uint32  `json:"intervalMs"`
 	Compound  string  `json:"compound"`
+	Actual    string  `json:"actual"`
 	TyreAge   uint8   `json:"tyreAge"`
 	Pits      uint8   `json:"pits"`
 	PitStatus uint8   `json:"pitStatus"`
 	Penalties uint8   `json:"penaltiesSec"`
+	Warnings  uint8   `json:"warnings"`
 	Status    uint8   `json:"resultStatus"`
 	Driver    uint8   `json:"driverStatus"`
 	Wear      float32 `json:"maxWear"`
+	ERSPct    float32 `json:"ersPct"`
 	ERSMode   string  `json:"ersMode"`
 }
 
@@ -151,6 +178,8 @@ func (s *State) Snapshot() *Snapshot {
 		AgeMs:      time.Since(s.LastPacketAt).Milliseconds(),
 		Cars:       []CarRow{},
 		Events:     []EventInfo{},
+		Forecast:   []ForecastSample{},
+		TyreOpts:   []TyreOpt{},
 	}
 	pi := int(s.PlayerIdx)
 	if pi >= f1udp.MaxCars {
@@ -199,11 +228,14 @@ func (s *State) Snapshot() *Snapshot {
 		st := s.Status.CarStatusData[pi]
 		p.MaxRPM = st.MaxRPM
 		p.Compound = f1udp.Name(f1udp.VisualCompoundNames, st.VisualTyreCompound)
+		p.Actual = actualCompound[st.ActualTyreCompound]
 		p.TyreAge, p.Fuel, p.FuelLaps, p.FuelMix, p.BrakeBias = st.TyresAgeLaps, st.FuelInTank, st.FuelRemainingLaps, st.FuelMix, st.FrontBrakeBias
 		p.ERSStoreMJ, p.ERSMode = st.ERSStoreEnergy/1e6, f1udp.Name(f1udp.ERSDeployModeNames, st.ERSDeployMode)
+		p.ERSPct = ersPct(st.ERSStoreEnergy)
 		p.ERSDeplMJ = st.ERSDeployedThisLap / 1e6
 		p.ERSHarvMJ = (st.ERSHarvestedThisLapMGUK + st.ERSHarvestedThisLapMGUH) / 1e6
 		p.ERSLimitMJ = st.ERSHarvestLimitPerLap / 1e6
+		p.PowerICE, p.PowerMGUK = st.EnginePowerICE/1000, st.EnginePowerMGUK/1000
 	}
 	if s.Telemetry2 != nil {
 		t2 := s.Telemetry2.CarTelemetry2Data[pi]
@@ -232,16 +264,18 @@ func (s *State) Snapshot() *Snapshot {
 				Lap: l.CurrentLapNum, LastLapMs: l.LastLapTimeInMS, BestLapMs: bestLap(s.History[i]),
 				S1Ms: l.Sector1MS(), S2Ms: l.Sector2MS(), GapLeader: l.DeltaToRaceLeaderMS(),
 				Interval: l.DeltaToCarInFrontMS(), Pits: l.NumPitStops, PitStatus: l.PitStatus,
-				Penalties: l.Penalties, Status: l.ResultStatus, Driver: l.DriverStatus,
+				Status: l.ResultStatus, Driver: l.DriverStatus,
 			}
 			if s.Participants != nil {
 				pp := s.Participants.Participants[i]
 				r.Team, r.AI = f1udp.Name(f1udp.TeamNames, pp.TeamID), pp.AIControlled == 1
 			}
+			r.Penalties, r.Warnings = l.Penalties, l.TotalWarnings
 			if s.Status != nil {
 				st := s.Status.CarStatusData[i]
-				r.Compound, r.TyreAge = f1udp.Name(f1udp.VisualCompoundNames, st.VisualTyreCompound), st.TyresAgeLaps
+				r.Compound, r.Actual, r.TyreAge = f1udp.Name(f1udp.VisualCompoundNames, st.VisualTyreCompound), actualCompound[st.ActualTyreCompound], st.TyresAgeLaps
 				r.ERSMode = f1udp.Name(f1udp.ERSDeployModeNames, st.ERSDeployMode)
+				r.ERSPct = ersPct(st.ERSStoreEnergy)
 			}
 			if s.Damage != nil {
 				for _, w := range s.Damage.CarDamageData[i].TyresWear {
@@ -255,10 +289,77 @@ func (s *State) Snapshot() *Snapshot {
 		sort.Slice(snap.Cars, func(a, b int) bool { return snap.Cars[a].Position < snap.Cars[b].Position })
 	}
 
+	if ses := s.Session; ses != nil {
+		for k := 0; k < int(ses.NumWeatherForecastSamples) && k < f1udp.MaxWeatherSamples; k++ {
+			f := ses.WeatherForecastSamples[k]
+			if f.SessionType != ses.SessionType {
+				continue
+			}
+			snap.Forecast = append(snap.Forecast, ForecastSample{
+				Offset: f.TimeOffset, Weather: f.Weather, Rain: f.RainPercentage,
+				TrackTemp: f.TrackTemperature, AirTemp: f.AirTemperature,
+			})
+		}
+	}
+	snap.TyreOpts = tyreOpts(s.TyreSets)
+
 	for _, e := range s.Recent {
 		snap.Events = append(snap.Events, EventInfo{SessionTime: e.SessionTime, Code: e.Code, Text: describe(s, e.Event)})
 	}
 	return snap
+}
+
+const ersStoreMaxJ = 4e6 // 4 MJ nominal store
+
+func ersPct(joules float32) float32 {
+	if joules <= 0 {
+		return 0
+	}
+	p := joules / ersStoreMaxJ * 100
+	if p > 100 {
+		return 100
+	}
+	return p
+}
+
+func tyreOpts(ts *f1udp.PacketTyreSetsData) []TyreOpt {
+	if ts == nil {
+		return []TyreOpt{}
+	}
+	best := map[string]*TyreOpt{}
+	for _, t := range ts.TyreSetData {
+		if t.Available != 1 || (t.ActualTyreCompound == 0 && t.VisualTyreCompound == 0) {
+			continue
+		}
+		visual := f1udp.Name(f1udp.VisualCompoundNames, t.VisualTyreCompound)
+		kind := "dry"
+		switch visual {
+		case "Inter":
+			kind = "inter"
+		case "Wet":
+			kind = "wet"
+		}
+		opt := &TyreOpt{Kind: kind, Actual: actualCompound[t.ActualTyreCompound], Visual: visual, DeltaMs: t.LapDeltaTime}
+		if cur := best[kind]; cur == nil || t.LapDeltaTime < cur.DeltaMs {
+			best[kind] = opt
+		}
+	}
+	out := make([]TyreOpt, 0, 3)
+	var fastest *TyreOpt
+	for _, k := range []string{"dry", "inter", "wet"} {
+		if o := best[k]; o != nil {
+			out = append(out, *o)
+			if fastest == nil || o.DeltaMs < fastest.DeltaMs {
+				fastest = o
+			}
+		}
+	}
+	for i := range out {
+		if fastest != nil && out[i].Kind == fastest.Kind && out[i].DeltaMs == fastest.DeltaMs {
+			out[i].Fastest = true
+		}
+	}
+	return out
 }
 
 func formatUID(u uint64) string {

@@ -3,20 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TeleLab</title>
+<title>TeleLab by Bálint Elekes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
-<body>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <nav class="nav" aria-label="Main menu">
-    <a href="/">Live</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessions</a><a href="/connect.html">Connect</a><a href="/team.html">Team</a>
-  </nav>
   <label class="feed-pick">
-    <span class="sr">Driver</span>
+    <span class="sr">Feed</span>
     <select id="feed"></select>
   </label>
   <p class="session" id="session">No feed selected</p>
@@ -24,101 +23,96 @@
   <div class="userbox" id="me"></div>
 </header>
 
-<main id="app">
+<main id="app" class="dv">
   <section class="empty" id="empty" hidden>
     <h1>No data on this port yet</h1>
     <p>In the game, under Telemetry Settings, set UDP IP address <b id="empty-ip"></b>, port <b id="empty-port"></b>, UDP Format 2026, Send Rate 60 Hz. As soon as you go out on track, everything shows up here. Full instructions are on the <a href="/connect.html">Connect</a> page.</p>
   </section>
 
   <div id="live" hidden>
-    <section class="trace" aria-label="Throttle, brake and speed over the last 20 seconds">
-      <canvas id="trace"></canvas>
-      <ul class="legend">
-        <li class="l-speed">Speed</li><li class="l-thr">Throttle</li><li class="l-brk">Brake</li>
-      </ul>
-    </section>
-
-    <div class="grid">
-      <section class="panel drive">
-        <div class="speed"><b id="speed">0</b><span>km/h</span></div>
-        <div class="gear" id="gear">N</div>
-        <div class="rpm"><i id="rpm-bar"></i></div>
-        <dl class="kv">
-          <div><dt>RPM</dt><dd id="rpm">–</dd></div>
-          <div><dt>Engine</dt><dd id="engine">–</dd></div>
-          <div><dt>Brake bias</dt><dd id="bias">–</dd></div>
-        </dl>
-        <div class="pedals">
-          <div><span>Throttle</span><i class="thr"><b id="thr-bar"></b></i></div>
-          <div><span>Brake</span><i class="brk"><b id="brk-bar"></b></i></div>
-        </div>
-      </section>
-
-      <section class="panel timing">
-        <div class="pos"><b id="pos">–</b><span id="lap">Lap –</span></div>
-        <div class="laptime">
-          <b id="cur">–</b>
-          <span id="invalid" hidden>Invalid lap</span>
-        </div>
-        <div class="sectors">
-          <div><span>S1</span><b id="s1">–</b></div>
-          <div><span>S2</span><b id="s2">–</b></div>
-          <div><span>Sector</span><b id="sector">–</b></div>
-        </div>
-        <dl class="kv">
-          <div><dt>Last lap</dt><dd id="last">–</dd></div>
-          <div><dt>Best lap</dt><dd id="best">–</dd></div>
-          <div><dt>Gap to car ahead</dt><dd id="gap">–</dd></div>
-          <div><dt>Gap to leader</dt><dd id="leader">–</dd></div>
-          <div><dt>Penalties, warnings</dt><dd id="pen">–</dd></div>
-        </dl>
-      </section>
-
-      <section class="panel tyres">
-        <h2><span id="compound" class="compound">–</span> <span id="tyre-age"></span></h2>
-        <div class="car">
-          <div class="tyre" id="t2"></div><div class="tyre" id="t3"></div>
-          <div class="tyre" id="t0"></div><div class="tyre" id="t1"></div>
-        </div>
-        <p class="hint">Surface / core °C, wear %, brake °C</p>
-      </section>
-
-      <section class="panel energy">
-        <div class="meter">
-          <div class="meter-head"><span>ERS</span><b id="ers">–</b><em id="ers-mode">–</em></div>
-          <i class="track"><b id="ers-bar"></b></i>
-          <p id="ers-lap">–</p>
-        </div>
-        <div class="meter">
-          <div class="meter-head"><span>Fuel</span><b id="fuel">–</b><em id="fuel-laps">–</em></div>
-          <p id="fuel-mix">–</p>
-        </div>
-        <ul class="flags">
-          <li id="f-aero">Active aero</li>
-          <li id="f-ot">Overtake</li>
-          <li id="f-drs">DRS</li>
-        </ul>
-        <dl class="kv" id="damage"></dl>
-      </section>
+    <div class="dv-top">
+      <div class="dv-livebadge" id="live-badge"><span class="dot"></span><span id="live-label">LIVE</span></div>
+      <p class="dv-meta" id="meta">–</p>
+      <p class="dv-hz" id="hz">–</p>
     </div>
 
-    <div class="lower">
-      <section class="panel standings">
-        <h2>Standings</h2>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Pos</th><th>Driver</th><th>Gap</th><th>Int.</th><th>Last</th><th>Best</th><th>Tyre</th><th>Stops</th><th>ERS</th></tr></thead>
-            <tbody id="cars"></tbody>
-          </table>
+    <div class="dv-hero">
+      <div>
+        <h1 class="dv-name" id="focus-name">–</h1>
+        <p class="dv-pos"><b id="focus-pos">–</b></p>
+        <p class="dv-muted" id="focus-note" hidden>Relative to this car. Systems below are from your feed.</p>
+      </div>
+      <div class="dv-drivers" id="drivers" role="listbox" aria-label="Select driver"></div>
+    </div>
+
+    <div class="dv-grid">
+      <section class="panel dv-card" id="card-weather">
+        <h2>Weather forecast</h2>
+        <div id="weather"></div>
+      </section>
+
+      <section class="panel dv-card" id="card-tyreopts">
+        <h2>Tyre options</h2>
+        <div class="dv-tyreopts" id="tyreopts"></div>
+      </section>
+
+      <section class="panel dv-card dv-span2" id="card-rel">
+        <h2>Relative</h2>
+        <div class="dv-rel" id="relative"></div>
+      </section>
+
+      <section class="panel dv-card dv-span2" id="card-wearstats">
+        <h2>Wear forecast</h2>
+        <div class="dv-wearstats" id="wearstats">
+          <div><span>Avg wear / lap</span><b>–</b><small>Needs 2+ laps</small></div>
+          <div><span>End of race</span><b>–</b><small>Needs data</small></div>
+          <div><span>80% wear lap</span><b>–</b><small>Needs 2+ laps</small></div>
         </div>
       </section>
-      <section class="panel events">
-        <h2>Race control</h2>
-        <ol id="events"></ol>
+
+      <section class="panel dv-card dv-span2" id="card-damage">
+        <h2>Car damage</h2>
+        <div class="dv-damage" id="damage"></div>
+      </section>
+
+      <section class="panel dv-card" id="card-fuel">
+        <h2>Fuel</h2>
+        <dl class="dv-stats" id="fuel"></dl>
+      </section>
+
+      <section class="panel dv-card" id="card-tyres">
+        <h2>Tyres</h2>
+        <div id="tyres-compound"></div>
+      </section>
+
+      <section class="panel dv-card" id="card-gap">
+        <h2>Gap ahead</h2>
+        <div id="gap"></div>
+      </section>
+
+      <section class="panel dv-card" id="card-engine">
+        <h2>Engine temp</h2>
+        <div id="engine"></div>
+      </section>
+
+      <section class="panel dv-card dv-span2" id="card-temps">
+        <h2>Tyre temperatures</h2>
+        <div class="dv-temps" id="temps"></div>
+      </section>
+
+      <section class="panel dv-card dv-span2" id="card-wear">
+        <h2>Tyre wear</h2>
+        <div class="dv-wearbars" id="wear"></div>
+      </section>
+
+      <section class="panel dv-card dv-span2" id="card-pens">
+        <h2>Penalties</h2>
+        <p class="dv-muted" id="penalties">No penalties</p>
       </section>
     </div>
   </div>
 </main>
+</div>
 <script src="app.js" type="module"></script>
 </body>
 </html>

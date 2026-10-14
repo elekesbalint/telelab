@@ -3,18 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connect · TeleLab</title>
+<title>Connect · TeleLab by Bálint Elekes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
-<body>
+<body class="has-side">
+<aside class="side" id="side" aria-label="Sections"></aside>
+<div class="maincol">
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <nav class="nav" aria-label="Main menu">
-    <a href="/">Live</a><a href="/workbench.html">Workbench</a><a href="/sessions.html">Sessions</a><a href="/connect.html">Connect</a><a href="/team.html">Team</a>
-  </nav>
   <span class="session"></span>
   <div class="userbox" id="me"></div>
 </header>
@@ -74,5 +73,6 @@
   refresh();
   setInterval(refresh, 5000);
 </script>
+</div>
 </body>
 </html>
