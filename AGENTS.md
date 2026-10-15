@@ -72,7 +72,7 @@ cd ~/telelab && GIT_SSH_COMMAND="ssh -i ~/.ssh/telelab" git pull && bash scripts
   1. Add the data to `live/workbench.go` (fast or slow part).
   2. Add an entry to `PANELS` in `static/panels.js` (`title, w, h, render(el, ctx)`).
   3. Optionally add it to `DEFAULT_VIEWS`.
-- **New API route:** register it in `web/server.go`. The auth middleware covers everything except `/login.html`, `/app.css`, `/healthz`, `/favicon.svg`, `/auth/*`.
+- **New API route:** register it in `web/server.go`. The auth middleware covers everything except `/login.html`, `/app.css`, `/healthz`, `/favicon.svg`, `/favicon.png`, `/favicon.ico`, `/logo.png`, `/auth/*`.
 - **Commits:** English, imperative ("Add tyre wear map"). Run the checks above first. Verify UI changes with the fake game.
 
 ## Open items (see docs §19–20)

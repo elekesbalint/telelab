@@ -210,7 +210,8 @@ func UserFrom(ctx context.Context) (store.User, bool) {
 // public paths reachable without signing in.
 func public(p string) bool {
 	switch {
-	case p == "/login.html", p == "/app.css", p == "/healthz", p == "/favicon.svg":
+	case p == "/login.html", p == "/app.css", p == "/healthz",
+		p == "/favicon.svg", p == "/favicon.png", p == "/favicon.ico", p == "/logo.png":
 		return true
 	case strings.HasPrefix(p, "/auth/"):
 		return true

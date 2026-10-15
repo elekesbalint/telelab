@@ -105,7 +105,7 @@ export async function initNav() {
     document.body.append(maincol);
   }
   side.innerHTML = `
-    <a class="side-brand" href="/" aria-label="TeleLab home"><span class="mark" aria-hidden="true">TL</span><span class="word">TeleLab<small>by Bálint Elekes & Tamás Gál</small></span></a>
+    <a class="side-brand" href="/" aria-label="TeleLab home"><span class="mark" aria-hidden="true"><img src="/logo.png" alt=""></span><span class="word">TeleLab<small>by Bálint Elekes & Tamás Gál</small></span></a>
     <nav class="side-nav">
       ${renderGroup("Live engineering", LIVE, here)}
       ${renderGroup("Data review", REVIEW, here)}
@@ -120,6 +120,13 @@ export async function initNav() {
   }
   const topNav = document.querySelector(".bar .nav");
   if (topNav) topNav.hidden = true;
+
+  if (!document.querySelector('link[rel="icon"]')) {
+    const fav = document.createElement("link");
+    fav.rel = "icon";
+    fav.href = "/logo.png";
+    document.head.append(fav);
+  }
 
   const me = await loadMe();
   if (!me) return null;

@@ -384,7 +384,7 @@ Szabályok:
 - **Portkiosztás:** minden jóváhagyott tag (owner, engineer, driver), akinek még nincs portja, belépéskor megkapja a legkisebb szabad portot 31600–31619 között. A tulajdonos a Team oldalon átírhatja. Két tagnak nem lehet ugyanaz a portja: ez `409 Conflict`.
 - Az owner szerepkör rögzített: az első belépő (Bálint) a tulajdonos. A Team oldalon nem lehet senkit tulajdonosnak tenni, és a tulajdonost sem lehet leváltani vagy törölni. Portot továbbra is kaphat.
 - Nézetet szerkeszteni vagy törölni a szerzője vagy a tulajdonos tud. A szerző nélküli nézeteket bárki.
-- **Nyilvános útvonalak** (belépés nélkül): `/login.html`, `/app.css`, `/healthz`, `/favicon.svg`, `/auth/*`. Minden más belépéshez kötött. Az API belépés nélkül `401`-et ad, a sima oldalak a loginra irányítanak.
+- **Nyilvános útvonalak** (belépés nélkül): `/login.html`, `/app.css`, `/healthz`, `/favicon.svg`, `/favicon.png`, `/favicon.ico`, `/logo.png`, `/auth/*`. Minden más belépéshez kötött. Az API belépés nélkül `401`-et ad, a sima oldalak a loginra irányítanak.
 
 ---
 
