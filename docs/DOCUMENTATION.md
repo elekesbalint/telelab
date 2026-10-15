@@ -382,7 +382,7 @@ Szabályok:
 - Ha egy várakozó tag később belép a csapat Discord-szerverére, a következő belépésekor automatikusan driver lesz.
 - Az engineer és a driver között jelenleg csak a megnevezés más, jogosultságban nem különböznek.
 - **Portkiosztás:** minden jóváhagyott tag (owner, engineer, driver), akinek még nincs portja, belépéskor megkapja a legkisebb szabad portot 31600–31619 között. A tulajdonos a Team oldalon átírhatja. Két tagnak nem lehet ugyanaz a portja: ez `409 Conflict`.
-- Az egyetlen tulajdonos nem veheti el a saját tulajdonosi jogát, és magát sem törölheti.
+- Az owner szerepkör rögzített: az első belépő (Bálint) a tulajdonos. A Team oldalon nem lehet senkit tulajdonosnak tenni, és a tulajdonost sem lehet leváltani vagy törölni. Portot továbbra is kaphat.
 - Nézetet szerkeszteni vagy törölni a szerzője vagy a tulajdonos tud. A szerző nélküli nézeteket bárki.
 - **Nyilvános útvonalak** (belépés nélkül): `/login.html`, `/app.css`, `/healthz`, `/favicon.svg`, `/auth/*`. Minden más belépéshez kötött. Az API belépés nélkül `401`-et ad, a sima oldalak a loginra irányítanak.
 
@@ -417,8 +417,8 @@ Minden végpont belépéshez kötött (kivéve `/healthz`). JSON-t ad vissza, `C
 | `GET /api/views` · `POST /api/views` · `PUT /api/views/{id}` · `DELETE /api/views/{id}` | Workbench-nézetek. A törzs: `{name, layout}`, legfeljebb 256 KB, a név legfeljebb 80 karakter. |
 | `GET /api/aliases` · `PUT /api/aliases` | Pilóta-aliasok: `{játékbeliNév: alias}`, aliasonként legfeljebb 40 karakter. |
 | `GET /api/team` | Tagok listája. |
-| `PATCH /api/team/{id}` | Csak a tulajdonos: `{role, udpPort}`. |
-| `DELETE /api/team/{id}` | Csak a tulajdonos. |
+| `PATCH /api/team/{id}` | Csak a tulajdonos: `{role, udpPort}`. Az `owner` szerepkör nem adható és nem vehető el (`400`). |
+| `DELETE /api/team/{id}` | Csak a tulajdonos. A tulajdonos fiókja nem törölhető. |
 | `GET /auth/discord` · `GET /auth/discord/callback` · `POST /auth/logout` | Belépés és kilépés. |
 | `GET /*` | Statikus fájlok a `static/` mappából. |
 

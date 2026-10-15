@@ -247,15 +247,13 @@ func (s *Server) updateMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if me, ok := auth.UserFrom(r.Context()); ok && me.ID == id && body.Role != store.RoleOwner {
-		if n, err := s.Store.CountOwners(r.Context()); err == nil && n <= 1 {
-			http.Error(w, "you are the only owner, so you cannot change your own role", http.StatusBadRequest)
-			return
-		}
-	}
 	u, err := s.Store.UpdateUser(r.Context(), id, body.Role, body.UDPPort)
 	if errors.Is(err, store.ErrPortTaken) {
 		http.Error(w, "this port is already assigned to someone else", http.StatusConflict)
+		return
+	}
+	if errors.Is(err, store.ErrOwnerLocked) {
+		http.Error(w, "the owner role cannot be changed", http.StatusBadRequest)
 		return
 	}
 	if err != nil {
@@ -272,6 +270,10 @@ func (s *Server) deleteMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.Store.DeleteUser(r.Context(), id); err != nil {
+		if errors.Is(err, store.ErrOwnerLocked) {
+			http.Error(w, "the owner cannot be removed", http.StatusBadRequest)
+			return
+		}
 		httpError(w, err)
 		return
 	}

@@ -35,8 +35,9 @@
   const me = await initNav();
   const owner = me?.role === "owner";
   let ports = [];
+  const ASSIGNABLE = { engineer: ROLE_NAME.engineer, driver: ROLE_NAME.driver, pending: ROLE_NAME.pending };
   if (owner) document.getElementById("lead").textContent =
-    "As the owner you approve new members, set roles and assign ports here. Changes apply immediately.";
+    "As the owner you approve new members, set roles and assign ports here. The owner role is fixed and cannot be given to anyone else. Changes apply immediately.";
 
   const notice = (t) => { const n = document.getElementById("notice"); n.textContent = t; if (t) setTimeout(() => n.textContent === t && (n.textContent = ""), 5000); };
 
@@ -53,19 +54,21 @@
     const last = new Date(u.lastLogin).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
     if (!owner) return `<tr><td>${who}</td><td>${ROLE_NAME[u.role]}</td><td>${u.udpPort ?? "–"}</td><td>${last}</td><td></td></tr>`;
     const taken = new Set(users.filter((x) => x.id !== u.id && x.udpPort != null).map((x) => x.udpPort));
-    const roleSel = `<select data-id="${u.id}" data-field="role" aria-label="Role: ${escapeHtml(name)}">${
-      Object.entries(ROLE_NAME).map(([k, v]) => `<option value="${k}" ${k === u.role ? "selected" : ""}>${v}</option>`).join("")}</select>`;
+    const roleCell = u.role === "owner"
+      ? `<span title="The owner role is fixed">${ROLE_NAME.owner}</span>`
+      : `<select data-id="${u.id}" data-field="role" aria-label="Role: ${escapeHtml(name)}">${
+        Object.entries(ASSIGNABLE).map(([k, v]) => `<option value="${k}" ${k === u.role ? "selected" : ""}>${v}</option>`).join("")}</select>`;
     const portSel = `<select data-id="${u.id}" data-field="udpPort" aria-label="Port: ${escapeHtml(name)}"><option value="">none</option>${
       ports.map((p) => `<option value="${p}" ${p === u.udpPort ? "selected" : ""} ${taken.has(p) ? "disabled" : ""}>${p}</option>`).join("")}</select>`;
-    const del = u.id === me.id ? "" : `<button class="btn" data-del="${u.id}">Remove</button>`;
-    return `<tr data-row="${u.id}"><td>${who}</td><td>${roleSel}</td><td>${portSel}</td><td>${last}</td><td>${del}</td></tr>`;
+    const del = u.role === "owner" || u.id === me.id ? "" : `<button class="btn" data-del="${u.id}">Remove</button>`;
+    return `<tr data-row="${u.id}" data-role="${escapeHtml(u.role)}"><td>${who}</td><td>${roleCell}</td><td>${portSel}</td><td>${last}</td><td>${del}</td></tr>`;
   }
 
   document.getElementById("members").addEventListener("change", async (e) => {
     const sel = e.target.closest("select");
     if (!sel) return;
     const tr = sel.closest("tr");
-    const role = tr.querySelector('[data-field="role"]').value;
+    const role = tr.querySelector('[data-field="role"]')?.value || tr.dataset.role;
     const p = tr.querySelector('[data-field="udpPort"]').value;
     const res = await fetch(`/api/team/${sel.dataset.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
