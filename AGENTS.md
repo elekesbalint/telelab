@@ -5,7 +5,7 @@ Full documentation: [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md), written in
 
 ## Project in one paragraph
 
-TeleLab ("TeleLab by Bálint Elekes") is a private telemetry platform for one F1 sim-racing team. It supports **F1 26 only**: EA SPORTS F1 25 "2026 Season Pack", UDP Format **2026**.
+TeleLab ("TeleLab by Bálint Elekes & Tamás Gál") is a private telemetry platform for one F1 sim-racing team. It supports **F1 26 only**: EA SPORTS F1 25 "2026 Season Pack", UDP Format **2026**.
 
 - Each driver's game sends UDP to its own port (31600–31619) on a VPS.
 - A Go server decodes the packets, keeps live state, and stores sessions, laps and samples in PostgreSQL + TimescaleDB.

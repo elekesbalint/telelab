@@ -1,6 +1,6 @@
 # TeleLab
 
-**TeleLab by Bálint Elekes**: F1 26 csapat-telemetria platform (EA SPORTS F1 25 „2026 Season Pack”, UDP Format 2026).
+**TeleLab by Bálint Elekes & Tamás Gál**: F1 26 csapat-telemetria platform (EA SPORTS F1 25 „2026 Season Pack”, UDP Format 2026).
 
 A játék UDP-n küldi az adatokat a szerverre. A TeleLab ebből élő mérnöki nézeteket készít (Live, Workbench), menti a sessionöket és a köröket, és köröket hasonlít össze. Belépés Discorddal.
 

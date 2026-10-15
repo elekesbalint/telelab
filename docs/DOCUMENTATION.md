@@ -1,6 +1,6 @@
 # TeleLab – teljes projektdokumentáció
 
-**TeleLab by Bálint Elekes**: F1 26 csapat-telemetria platform a saját csapatnak.
+**TeleLab by Bálint Elekes & Tamás Gál**: F1 26 csapat-telemetria platform a saját csapatnak.
 
 Ez a dokumentum mindent leír, ami a projekt folytatásához kell: mit tud a rendszer, hogyan épül fel, hol fut, hogyan kell telepíteni és frissíteni, hogyan kell helyben fejleszteni Cursorban, és mi a következő lépés.
 

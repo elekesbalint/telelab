@@ -83,7 +83,7 @@ export async function initNav() {
     document.body.append(maincol);
   }
   side.innerHTML = `
-    <a class="side-brand" href="/">Tele<span>Lab</span><small>by Bálint Elekes</small></a>
+    <a class="side-brand" href="/">Tele<span>Lab</span><small>by Bálint Elekes & Tamás Gál</small></a>
     <nav class="side-nav">
       ${renderGroup("Live engineering", LIVE, here)}
       ${renderGroup("Data review", REVIEW, here)}
