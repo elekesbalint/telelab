@@ -14,7 +14,7 @@ const WHEELS = ["Rear left", "Rear right", "Front left", "Front right"]; // data
 
 export const tyreBadge = (c) => `<span class="tyre-badge" style="--c:${COMPOUND_COLOR[c] || "var(--line)"}" title="${esc(c || "")}">${COMPOUND_LETTER[c] || "?"}</span>`;
 const empty = (t) => `<p class="wb-muted">${t}</p>`;
-const tempColor = (t) => (t < 80 ? "var(--cold)" : t > 105 ? "var(--hot)" : "var(--thr)");
+const tempColor = (t) => (t < 80 ? "var(--cold)" : t > 105 ? "var(--hot)" : "var(--chalk)");
 
 function weatherIcon(w) {
   const sun = `<circle cx="12" cy="12" r="5" fill="var(--medium)"/>`;
@@ -110,7 +110,7 @@ export const PANELS = {
             return `<tr data-focus="${c.idx}" class="${c.isPlayer ? "me" : ""} ${c.idx === d.focusIdx ? "focus" : ""}" tabindex="0">
               <td>${c.position}</td><td><i class="teamc" style="background:${c.color || "var(--line)"}"></i></td>
               <td class="name">${esc(alias(c.name))}${c.ai ? "" : ""}</td><td class="dim">${esc(c.team || "")}</td>
-              <td class="${c.bestLapMs && c.bestLapMs === s.sessionBestLapMs ? "purple" : "amber"}">${fmtLap(c.bestLapMs)}</td>
+              <td class="${c.bestLapMs && c.bestLapMs === s.sessionBestLapMs ? "purple" : ""}">${fmtLap(c.bestLapMs)}</td>
               <td>${gap}</td>
               <td class="${sc(c.bestS1, s.bestS1)}">${fmtLap(c.bestS1)}</td><td class="${sc(c.bestS2, s.bestS2)}">${fmtLap(c.bestS2)}</td><td class="${sc(c.bestS3, s.bestS3)}">${fmtLap(c.bestS3)}</td>
               <td>${c.speedTrap ? c.speedTrap.toFixed(0) : "–"}</td><td>${c.laps}</td><td>${tyreBadge(c.compound)}</td><td class="dim">${esc(c.status || "")}</td></tr>`;
@@ -200,7 +200,7 @@ export const PANELS = {
       const order = [[2, "FL"], [3, "FR"], [0, "RL"], [1, "RR"]];
       el.innerHTML = `<p class="who-line">${esc(alias(f.name))}, ${tyreBadge(f.compound)} ${f.tyreAge} laps</p>` + order.map(([i, n]) => {
         const w = f.tyreWear[i] || 0;
-        return `<div class="bar-row"><span>${n}</span><i><b style="width:${Math.min(100, w)}%;background:${w > 60 ? "var(--brk)" : w > 35 ? "var(--medium)" : "var(--thr)"}"></b></i><em>${w.toFixed(1)}%</em></div>`;
+        return `<div class="bar-row"><span>${n}</span><i><b style="width:${Math.min(100, w)}%;background:${w > 60 ? "var(--brk)" : w > 35 ? "var(--hot)" : "var(--live)"}"></b></i><em>${w.toFixed(1)}%</em></div>`;
       }).join("");
     },
   },
@@ -271,7 +271,7 @@ export const PANELS = {
       el.innerHTML = `<div class="seg-tabs">${[["all", "All"], ["q1", "Q1"], ["q2", "Q2"], ["q3", "Q3"], ["short", "Short Q"]]
         .map(([k, n]) => `<button class="${k === seg ? "on" : ""}" data-seg="${k}">${n}</button>`).join("")}<span class="wb-muted small">${segments.note}</span></div>
         <div class="table-wrap"><table class="tt"><thead><tr><th>P</th><th>Driver</th><th>Best</th><th>S1</th><th>S2</th><th>S3</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Short Q</th><th>Laps (Q1/Q2/Q3/SQ)</th></tr></thead>
-        <tbody>${list.map((x, i) => `<tr><td>${i + 1}</td><td class="name">${esc(alias(x.driver))}</td><td class="amber">${fmtLap(x.best.bestLapMs)}</td>
+        <tbody>${list.map((x, i) => `<tr><td>${i + 1}</td><td class="name">${esc(alias(x.driver))}</td><td>${fmtLap(x.best.bestLapMs)}</td>
           <td class="${x.best.s1 === b1 ? "purple" : ""}">${fmtLap(x.best.s1)}</td><td class="${x.best.s2 === b2 ? "purple" : ""}">${fmtLap(x.best.s2)}</td><td class="${x.best.s3 === b3 ? "purple" : ""}">${fmtLap(x.best.s3)}</td>
           <td>${fmtLap(x.by[5]?.bestLapMs)}</td><td>${fmtLap(x.by[6]?.bestLapMs)}</td><td>${fmtLap(x.by[7]?.bestLapMs)}</td><td>${fmtLap(x.by[8]?.bestLapMs)}</td>
           <td>${x.by[5]?.laps ?? 0}/${x.by[6]?.laps ?? 0}/${x.by[7]?.laps ?? 0}/${x.by[8]?.laps ?? 0}</td></tr>`).join("") || `<tr><td colspan="11">No qualifying laps on this track in the last 12 hours.</td></tr>`}</tbody></table></div>`;
