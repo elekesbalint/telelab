@@ -170,10 +170,30 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 // ErrPortTaken is returned when assigning a port that another user has.
 var ErrPortTaken = errors.New("port already assigned to another user")
 
+// ErrOwnerLocked is returned when assigning or removing the owner role.
+var ErrOwnerLocked = errors.New("the owner role cannot be changed")
+
+// UserByID returns one user.
+func (s *Store) UserByID(ctx context.Context, id int64) (User, error) {
+	return scanUser(s.db.QueryRowContext(ctx, `SELECT `+userCols+` FROM users WHERE id = $1`, id))
+}
+
 // UpdateUser changes a user's role and port (port nil = no port).
+// The owner role cannot be granted or taken away here; only the first
+// Discord login creates the owner.
 func (s *Store) UpdateUser(ctx context.Context, id int64, role string, port *int) (User, error) {
 	if !ValidRole(role) {
 		return User{}, fmt.Errorf("invalid role %q", role)
+	}
+	cur, err := s.UserByID(ctx, id)
+	if err != nil {
+		return User{}, err
+	}
+	if cur.Role == RoleOwner && role != RoleOwner {
+		return User{}, ErrOwnerLocked
+	}
+	if role == RoleOwner && cur.Role != RoleOwner {
+		return User{}, ErrOwnerLocked
 	}
 	u, err := scanUser(s.db.QueryRowContext(ctx, `UPDATE users SET role = $2, udp_port = $3 WHERE id = $1 RETURNING `+userCols, id, role, port))
 	if err != nil && isUniqueViolation(err) {
@@ -182,9 +202,16 @@ func (s *Store) UpdateUser(ctx context.Context, id int64, role string, port *int
 	return u, err
 }
 
-// DeleteUser removes a user and their login sessions.
+// DeleteUser removes a user and their login sessions. The owner cannot be removed.
 func (s *Store) DeleteUser(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, id)
+	cur, err := s.UserByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if cur.Role == RoleOwner {
+		return ErrOwnerLocked
+	}
+	_, err = s.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, id)
 	return err
 }
 
