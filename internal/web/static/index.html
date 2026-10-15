@@ -6,7 +6,7 @@
 <title>TeleLab by Bálint Elekes & Tamás Gál</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 </head>
 <body class="has-side">
@@ -27,84 +27,71 @@
   </section>
 
   <div id="live" hidden>
-    <div class="dv-top">
-      <div class="dv-livebadge" id="live-badge"><span class="dot"></span><span id="live-label">LIVE</span></div>
-      <p class="dv-meta" id="meta">–</p>
+    <div class="dv-head">
+      <div>
+        <h1 class="dv-title" id="dv-title">–</h1>
+        <p class="dv-meta" id="meta">–</p>
+      </div>
+      <div class="dv-livebadge" id="live-badge"><span class="dot"></span><span id="live-label">Live</span></div>
       <p class="dv-hz" id="hz">–</p>
     </div>
 
-    <div class="dv-hero">
-      <div>
-        <h1 class="dv-name" id="focus-name">–</h1>
-        <p class="dv-pos"><b id="focus-pos">–</b></p>
-        <p class="dv-muted" id="focus-note" hidden>Relative to this car. Systems below are from your feed.</p>
-      </div>
-      <div class="dv-drivers" id="drivers" role="listbox" aria-label="Select driver"></div>
-    </div>
+    <div class="dv-drivers" id="drivers" role="listbox" aria-label="Select driver"></div>
 
-    <div class="dv-grid">
-      <section class="panel dv-card" id="card-weather">
-        <h2>Weather forecast</h2>
-        <div id="weather"></div>
-      </section>
-
-      <section class="panel dv-card" id="card-tyreopts">
-        <h2>Tyre options</h2>
-        <div class="dv-tyreopts" id="tyreopts"></div>
-      </section>
-
-      <section class="panel dv-card dv-span2" id="card-rel">
-        <h2>Relative</h2>
-        <div class="dv-rel" id="relative"></div>
-      </section>
-
-      <section class="panel dv-card dv-span2" id="card-wearstats">
-        <h2>Wear forecast</h2>
-        <div class="dv-wearstats" id="wearstats">
-          <div><span>Avg wear / lap</span><b>–</b><small>Needs 2+ laps</small></div>
-          <div><span>End of race</span><b>–</b><small>Needs data</small></div>
-          <div><span>80% wear lap</span><b>–</b><small>Needs 2+ laps</small></div>
+    <div class="bento">
+      <section class="tile t-pos" aria-label="Position">
+        <span class="t-lab">Position</span>
+        <b class="pos-num" id="focus-pos">–</b>
+        <div>
+          <p class="pos-name" id="focus-name">–</p>
+          <p class="pos-sub" id="focus-sub">–</p>
+          <p class="pos-sub" id="focus-note" hidden>Gaps and lap times follow this car. Car systems are from your own feed.</p>
         </div>
       </section>
 
-      <section class="panel dv-card dv-span2" id="card-damage">
-        <h2>Car damage</h2>
-        <div class="dv-damage" id="damage"></div>
+      <section class="tile t-lap" aria-label="Current lap">
+        <div class="t-row"><span class="t-lab">Current lap</span><span class="t-aside" id="lap-ref">–</span></div>
+        <b class="lap-time" id="lap-time">–</b>
+        <div class="sectors" id="sectors"></div>
       </section>
 
-      <section class="panel dv-card" id="card-fuel">
-        <h2>Fuel</h2>
-        <dl class="dv-stats" id="fuel"></dl>
+      <section class="tile t-gaps" aria-label="Gaps">
+        <span class="t-lab">Gaps</span>
+        <div id="gaps"></div>
       </section>
 
-      <section class="panel dv-card" id="card-tyres">
-        <h2>Tyres</h2>
-        <div id="tyres-compound"></div>
+      <section class="tile t-tyres" aria-label="Tyres">
+        <div class="t-row"><span class="t-lab" id="tyre-head">Tyres</span><span class="t-aside" id="tyre-age">–</span></div>
+        <div class="rings" id="tyres"></div>
       </section>
 
-      <section class="panel dv-card" id="card-gap">
-        <h2>Gap ahead</h2>
-        <div id="gap"></div>
+      <section class="tile t-energy" aria-label="Energy">
+        <div id="energy"></div>
       </section>
 
-      <section class="panel dv-card" id="card-engine">
-        <h2>Engine temp</h2>
-        <div id="engine"></div>
+      <section class="tile t-fuel" aria-label="Fuel">
+        <span class="t-lab">Fuel at the flag</span>
+        <div id="fuel"></div>
       </section>
 
-      <section class="panel dv-card dv-span2" id="card-temps">
-        <h2>Tyre temperatures</h2>
-        <div class="dv-temps" id="temps"></div>
+      <section class="tile t-weather" aria-label="Weather">
+        <div class="t-row"><span class="t-lab" id="wx-head">Weather</span><span class="t-aside" id="wx-temps">–</span></div>
+        <div class="rainbars" id="weather"></div>
       </section>
 
-      <section class="panel dv-card dv-span2" id="card-wear">
-        <h2>Tyre wear</h2>
-        <div class="dv-wearbars" id="wear"></div>
+      <section class="tile t-damage" aria-label="Damage">
+        <span class="t-lab">Damage</span>
+        <div class="chips" id="damage"></div>
       </section>
 
-      <section class="panel dv-card dv-span2" id="card-pens">
-        <h2>Penalties</h2>
-        <p class="dv-muted" id="penalties">No penalties</p>
+      <section class="tile t-topts" aria-label="Tyre options">
+        <span class="t-lab">Tyre options</span>
+        <div id="tyreopts"></div>
+      </section>
+
+      <section class="tile t-pit" aria-label="Pit window">
+        <div class="t-row"><span class="t-lab">Race distance</span><span class="t-aside" id="pit-note">–</span></div>
+        <div class="lapstrip" id="pit"></div>
       </section>
     </div>
   </div>
