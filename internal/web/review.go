@@ -174,24 +174,56 @@ func (s *Server) sessionFuel(w http.ResponseWriter, r *http.Request) {
 
 // lapTrace is a lap's telemetry in columns, indexed by sample.
 type lapTrace struct {
-	SessionID int64     `json:"sessionId"`
-	Lap       int       `json:"lap"`
-	LapTimeMs int       `json:"lapTimeMs"`
-	Valid     bool      `json:"valid"`
-	Driver    string    `json:"driver"`
-	Track     string    `json:"track"`
-	Dist      []float32 `json:"dist"`  // metres from the line
-	T         []int     `json:"t"`     // ms since lap start, scaled to the official lap time
-	Speed     []int     `json:"speed"` // km/h
-	Throttle  []float32 `json:"throttle"`
-	Brake     []float32 `json:"brake"`
-	Steer     []float32 `json:"steer"`
-	Gear      []int     `json:"gear"`
-	RPM       []int     `json:"rpm"`
-	DRS       []int     `json:"drs"`
-	ERS       []float32 `json:"ersMJ"`
-	X         []float32 `json:"x"`
-	Z         []float32 `json:"z"`
+	SessionID int64        `json:"sessionId"`
+	Lap       int          `json:"lap"`
+	LapTimeMs int          `json:"lapTimeMs"`
+	S1        int          `json:"s1Ms"`
+	S2        int          `json:"s2Ms"`
+	S3        int          `json:"s3Ms"`
+	Valid     bool         `json:"valid"`
+	Driver    string       `json:"driver"`
+	Track     string       `json:"track"`
+	Tyre      int          `json:"tyreVisual"`
+	Dist      []float32    `json:"dist"`  // metres from the line
+	T         []int        `json:"t"`     // ms since lap start, scaled to the official lap time
+	Speed     []int        `json:"speed"` // km/h
+	Throttle  []float32    `json:"throttle"`
+	Brake     []float32    `json:"brake"`
+	Steer     []float32    `json:"steer"`
+	Gear      []int        `json:"gear"`
+	RPM       []int        `json:"rpm"`
+	DRS       []int        `json:"drs"`
+	ERS       []float32    `json:"ersMJ"`
+	ERSMode   []int        `json:"ersMode"`
+	ERSPct    []float32    `json:"ersPct"`
+	ERSChg    []float32    `json:"ersChg"` // harvested this lap, % of limit
+	X         []float32    `json:"x"`
+	Z         []float32    `json:"z"`
+	YawDeg    []float32    `json:"yawDeg,omitempty"`
+	YawRate   []float32    `json:"yawRate,omitempty"`
+	EngTemp   []int        `json:"engTemp,omitempty"`
+	Bias      []int        `json:"bias,omitempty"`
+	Aero      []int        `json:"aero,omitempty"` // 0 corner, 1 straight, -1 unknown
+	CogMM     []float32    `json:"cogMm,omitempty"`
+	BrakeT    [4][]int     `json:"brakeTemp,omitempty"` // RL RR FL FR
+	TSurf     [4][]int     `json:"tSurf,omitempty"`
+	TInner    [4][]int     `json:"tInner,omitempty"`
+	Wear      [4][]float32 `json:"wear,omitempty"`
+}
+
+type sampleExtra struct {
+	EngTemp    int       `json:"engTemp"`
+	Bias       int       `json:"bias"`
+	Aero       *int      `json:"aero"`
+	Harvest    float32   `json:"harvest"`
+	HarvestLim float32   `json:"harvestLim"`
+	Cog        float32   `json:"cog"`
+	Yaw        float32   `json:"yaw"`
+	YawRate    float32   `json:"yawRate"`
+	Brakes     []int     `json:"brakes"`
+	TSurf      []int     `json:"tSurf"`
+	TInner     []int     `json:"tInner"`
+	Wear       []float32 `json:"wear"`
 }
 
 // lapTelemetry: GET /api/sessions/{id}/laps/{lap}/telemetry
@@ -208,9 +240,10 @@ func (s *Server) lapTelemetry(w http.ResponseWriter, r *http.Request) {
 	tr := lapTrace{SessionID: id, Lap: lap}
 	var trackID int
 	err := s.DB.QueryRowContext(ctx, `
-		SELECT COALESCE(l.lap_time_ms, 0), COALESCE(l.valid, false), COALESCE(NULLIF(l.driver_name, ''), s.player_name), COALESCE(s.track_id, -1)
+		SELECT COALESCE(l.lap_time_ms, 0), COALESCE(l.s1_ms,0), COALESCE(l.s2_ms,0), COALESCE(l.s3_ms,0),
+		       COALESCE(l.valid, false), COALESCE(NULLIF(l.driver_name, ''), s.player_name), COALESCE(s.track_id, -1), COALESCE(l.tyre_visual,0)
 		FROM sessions s LEFT JOIN laps l ON l.session_id = s.id AND l.is_player AND l.lap_num = $2
-		WHERE s.id = $1`, id, lap).Scan(&tr.LapTimeMs, &tr.Valid, &tr.Driver, &trackID)
+		WHERE s.id = $1`, id, lap).Scan(&tr.LapTimeMs, &tr.S1, &tr.S2, &tr.S3, &tr.Valid, &tr.Driver, &trackID, &tr.Tyre)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.NotFound(w, r)
 		return
@@ -222,7 +255,7 @@ func (s *Server) lapTelemetry(w http.ResponseWriter, r *http.Request) {
 	tr.Track = f1udp.Name(f1udp.TrackNames, int8(trackID))
 
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT time, lap_distance, speed, throttle, brake, steer, gear, rpm, drs, ers_store, pos_x, pos_z
+		SELECT time, lap_distance, speed, throttle, brake, steer, gear, rpm, drs, ers_store, ers_mode, pos_x, pos_z, extra
 		FROM samples WHERE session_id = $1 AND lap_num = $2 ORDER BY time`, id, lap)
 	if err != nil {
 		httpError(w, err)
@@ -231,15 +264,16 @@ func (s *Server) lapTelemetry(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type sample struct {
-		t                       time.Time
-		dist, thr, brk, st, ers float32
-		x, z                    float32
-		speed, gear, rpm, drs   int
+		t                           time.Time
+		dist, thr, brk, st, ers     float32
+		x, z                        float32
+		speed, gear, rpm, drs, mode int
+		extra                       []byte
 	}
 	var all []sample
 	for rows.Next() {
 		var p sample
-		if err := rows.Scan(&p.t, &p.dist, &p.speed, &p.thr, &p.brk, &p.st, &p.gear, &p.rpm, &p.drs, &p.ers, &p.x, &p.z); err != nil {
+		if err := rows.Scan(&p.t, &p.dist, &p.speed, &p.thr, &p.brk, &p.st, &p.gear, &p.rpm, &p.drs, &p.ers, &p.mode, &p.x, &p.z, &p.extra); err != nil {
 			httpError(w, err)
 			return
 		}
@@ -267,6 +301,22 @@ func (s *Server) lapTelemetry(w http.ResponseWriter, r *http.Request) {
 	if tr.LapTimeMs > 0 && span > 0 {
 		scale = float64(tr.LapTimeMs) / span
 	}
+	n := len(all)
+	tr.Dist = make([]float32, 0, n)
+	tr.T = make([]int, 0, n)
+	tr.Speed = make([]int, 0, n)
+	tr.Throttle = make([]float32, 0, n)
+	tr.Brake = make([]float32, 0, n)
+	tr.Steer = make([]float32, 0, n)
+	tr.Gear = make([]int, 0, n)
+	tr.RPM = make([]int, 0, n)
+	tr.DRS = make([]int, 0, n)
+	tr.ERS = make([]float32, 0, n)
+	tr.ERSMode = make([]int, 0, n)
+	tr.ERSPct = make([]float32, 0, n)
+	tr.X = make([]float32, 0, n)
+	tr.Z = make([]float32, 0, n)
+	var extraN int
 	for _, p := range all {
 		tr.Dist = append(tr.Dist, p.dist)
 		tr.T = append(tr.T, int(math.Round(float64(p.t.Sub(all[0].t).Milliseconds())*scale)))
@@ -278,8 +328,93 @@ func (s *Server) lapTelemetry(w http.ResponseWriter, r *http.Request) {
 		tr.RPM = append(tr.RPM, p.rpm)
 		tr.DRS = append(tr.DRS, p.drs)
 		tr.ERS = append(tr.ERS, p.ers/1e6)
+		tr.ERSMode = append(tr.ERSMode, p.mode)
+		tr.ERSPct = append(tr.ERSPct, p.ers/4e6*100)
 		tr.X = append(tr.X, p.x)
 		tr.Z = append(tr.Z, p.z)
+		if len(p.extra) == 0 {
+			continue
+		}
+		var e sampleExtra
+		if json.Unmarshal(p.extra, &e) != nil {
+			continue
+		}
+		if extraN == 0 {
+			tr.YawDeg = make([]float32, 0, n)
+			tr.YawRate = make([]float32, 0, n)
+			tr.EngTemp = make([]int, 0, n)
+			tr.Bias = make([]int, 0, n)
+			tr.Aero = make([]int, 0, n)
+			tr.CogMM = make([]float32, 0, n)
+			tr.ERSChg = make([]float32, 0, n)
+			for w := 0; w < 4; w++ {
+				tr.BrakeT[w] = make([]int, 0, n)
+				tr.TSurf[w] = make([]int, 0, n)
+				tr.TInner[w] = make([]int, 0, n)
+				tr.Wear[w] = make([]float32, 0, n)
+			}
+		}
+		// Pad if earlier samples had no extra.
+		for extraN < len(tr.Dist)-1 {
+			padExtra(&tr)
+			extraN++
+		}
+		tr.YawDeg = append(tr.YawDeg, e.Yaw)
+		tr.YawRate = append(tr.YawRate, e.YawRate)
+		tr.EngTemp = append(tr.EngTemp, e.EngTemp)
+		tr.Bias = append(tr.Bias, e.Bias)
+		if e.Aero != nil {
+			tr.Aero = append(tr.Aero, *e.Aero)
+		} else {
+			tr.Aero = append(tr.Aero, -1)
+		}
+		tr.CogMM = append(tr.CogMM, e.Cog*1000)
+		chg := float32(0)
+		if e.HarvestLim > 0 {
+			chg = e.Harvest / e.HarvestLim * 100
+		}
+		tr.ERSChg = append(tr.ERSChg, chg)
+		for w := 0; w < 4; w++ {
+			tr.BrakeT[w] = append(tr.BrakeT[w], atI(e.Brakes, w))
+			tr.TSurf[w] = append(tr.TSurf[w], atI(e.TSurf, w))
+			tr.TInner[w] = append(tr.TInner[w], atI(e.TInner, w))
+			tr.Wear[w] = append(tr.Wear[w], atF(e.Wear, w))
+		}
+		extraN++
+	}
+	for extraN > 0 && extraN < len(tr.Dist) {
+		padExtra(&tr)
+		extraN++
 	}
 	writeJSON(w, tr)
+}
+
+func padExtra(tr *lapTrace) {
+	tr.YawDeg = append(tr.YawDeg, 0)
+	tr.YawRate = append(tr.YawRate, 0)
+	tr.EngTemp = append(tr.EngTemp, 0)
+	tr.Bias = append(tr.Bias, 0)
+	tr.Aero = append(tr.Aero, -1)
+	tr.CogMM = append(tr.CogMM, 0)
+	tr.ERSChg = append(tr.ERSChg, 0)
+	for w := 0; w < 4; w++ {
+		tr.BrakeT[w] = append(tr.BrakeT[w], 0)
+		tr.TSurf[w] = append(tr.TSurf[w], 0)
+		tr.TInner[w] = append(tr.TInner[w], 0)
+		tr.Wear[w] = append(tr.Wear[w], 0)
+	}
+}
+
+func atI(xs []int, i int) int {
+	if i < 0 || i >= len(xs) {
+		return 0
+	}
+	return xs[i]
+}
+
+func atF(xs []float32, i int) float32 {
+	if i < 0 || i >= len(xs) {
+		return 0
+	}
+	return xs[i]
 }

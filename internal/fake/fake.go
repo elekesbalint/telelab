@@ -67,25 +67,43 @@ func Frame(frame uint32, t float32) [][]byte {
 		lapPkt.LapData[i] = f1udp.LapData{CurrentLapTimeInMS: uint32(f * LapSeconds * 1000), LastLapTimeInMS: last,
 			CarPosition: uint8(i + 1), CurrentLapNum: uint8(lap), Sector: uint8(f * 3), ResultStatus: 2,
 			DeltaToCarInFrontMSPart: uint16(i * 850), DeltaToRaceLeaderMSPart: uint16(i * 1700), LapDistance: float32(dist)}
+		mode := uint8(1)
+		if thr > 0.85 {
+			mode = 3
+		} else if brk > 0.4 {
+			mode = 0
+		}
 		st.CarStatusData[i] = f1udp.CarStatusData{FuelInTank: float32(30 - float64(t)*0.02), FuelRemainingLaps: 1.3, VisualTyreCompound: uint8(16 + i%3),
-			TyresAgeLaps: uint8(lap - 1), ERSStoreEnergy: float32(2e6 + 1.5e6*math.Sin(angle)), ERSDeployMode: 1, MaxRPM: 12500, FrontBrakeBias: 56}
+			TyresAgeLaps: uint8(lap - 1), ERSStoreEnergy: float32(2e6 + 1.5e6*math.Sin(angle)), ERSDeployMode: mode, MaxRPM: 12500, FrontBrakeBias: 58,
+			ERSHarvestedThisLapMGUK: float32(f * 1.2e6), ERSHarvestedThisLapMGUH: float32(f * 0.4e6), ERSHarvestLimitPerLap: 2e6}
 		w := float32(float64(t) * 0.02)
 		dmg.CarDamageData[i].TyresWear = [4]float32{w, w * 1.05, w * 0.9, w * 0.95}
 	}
 	tel := f1udp.PacketCarTelemetryData{Header: h(f1udp.IDCarTelemetry)}
+	eng := uint8(122 + 8*brk)
+	surf := [4]uint8{uint8(88 + 18*thr), uint8(90 + 16*thr), uint8(78 + 12*thr), uint8(80 + 14*thr)}
+	inner := [4]uint8{uint8(92 + 16*thr), uint8(94 + 14*thr), uint8(86 + 10*thr), uint8(88 + 12*thr)}
+	brkT := uint16(280 + 520*brk)
 	tel.CarTelemetryData[0] = f1udp.CarTelemetryData{Speed: uint16(speed), Throttle: float32(thr), Brake: float32(brk),
 		Steer: float32(-math.Sin(6*math.Pi*f) * 0.4), Gear: int8(2 + speed/50), EngineRPM: uint16(8000 + 30*speed*thr/1.0),
-		EngineTemperature: 108, TyresSurfaceTemperature: [4]uint8{96, 97, 79, 108}, TyresInnerTemperature: [4]uint8{101, 102, 99, 100},
-		BrakesTemperature: [4]uint16{540, 545, 610, 615}, TyresPressure: [4]float32{21.9, 21.9, 23.3, 23.3}}
+		EngineTemperature: eng, TyresSurfaceTemperature: surf, TyresInnerTemperature: inner,
+		BrakesTemperature: [4]uint16{brkT, brkT + 8, brkT + 40, brkT + 48}, TyresPressure: [4]float32{21.9, 21.9, 23.3, 23.3}}
 	t2 := f1udp.PacketCarTelemetry2Data{Header: h(f1udp.IDCarTelemetry2)}
 	t2.CarTelemetry2Data[0] = f1udp.CarTelemetry2Data{ActiveAeroMode: uint8(map[bool]int{true: 1}[corner > 0.5]), OvertakeAvailable: 1, Regulations2026: 1}
 	motion := f1udp.PacketMotionData{Header: h(f1udp.IDMotion)}
 	motion.CarMotionData[0].WorldPositionX, motion.CarMotionData[0].WorldPositionZ = float32(px), float32(pz)
+	motion.CarMotionData[0].Yaw = float32(angle)
+	cog := 0.008 + 0.010*math.Max(0, corner) + 0.0015*math.Sin(40*angle)
+	if brk > 0.75 {
+		cog = 0.0007 + 0.0004*math.Abs(math.Sin(20*angle))
+	}
 	mex := f1udp.PacketMotionExData{Header: h(f1udp.IDMotionEx),
-		WheelVertForce:  [4]float32{4200, 4100, 3800, 3700},
-		WheelLatForce:   [4]float32{2800, 2500, 2100, 1600},
-		WheelLongForce:  [4]float32{900, 800, 500, 400},
-		WheelSlipRatio:  [4]float32{0.012, 0.01, 0.008, 0.009}}
+		HeightOfCOGAboveGround: float32(cog),
+		AngularVelocityY:       float32(-math.Sin(6*math.Pi*f) * 0.55),
+		WheelVertForce:         [4]float32{4200, 4100, 3800, 3700},
+		WheelLatForce:          [4]float32{2800, 2500, 2100, 1600},
+		WheelLongForce:         [4]float32{900, 800, 500, 400},
+		WheelSlipRatio:         [4]float32{0.012, 0.01, 0.008, 0.009}}
 
 	// session history for one car per frame, like the game does
 	car := int(frame % uint32(len(names)))

@@ -41,6 +41,9 @@ type Feed struct {
 	lap          *f1udp.PacketLapData
 	status       *f1udp.PacketCarStatusData
 	motion       *f1udp.PacketMotionData
+	telemetry2   *f1udp.PacketCarTelemetry2Data
+	damage       *f1udp.PacketCarDamageData
+	motionEx     *f1udp.PacketMotionExData
 
 	sentLaps    map[[2]int]uint32 // (car, lap) -> lap time already written
 	pitActive   [f1udp.MaxCars]uint8
@@ -97,6 +100,12 @@ func (f *Feed) Handle(now time.Time, raw []byte) {
 		f.status = v
 	case *f1udp.PacketMotionData:
 		f.motion = v
+	case *f1udp.PacketCarTelemetry2Data:
+		f.telemetry2 = v
+	case *f1udp.PacketCarDamageData:
+		f.damage = v
+	case *f1udp.PacketMotionExData:
+		f.motionEx = v
 	case *f1udp.PacketSessionHistoryData:
 		f.collectLaps(h, v)
 	case *f1udp.PacketCarTelemetryData:
@@ -117,6 +126,7 @@ func (f *Feed) newSession(h f1udp.Header) {
 	f.uid = h.SessionUID
 	f.key = sessionKey{uid: strconv.FormatUint(h.SessionUID, 10), port: f.Port}
 	f.session, f.participants, f.lap, f.status, f.motion = nil, nil, nil, nil, nil
+	f.telemetry2, f.damage, f.motionEx = nil, nil, nil
 	f.sentLaps = map[[2]int]uint32{}
 	f.pitActive = [f1udp.MaxCars]uint8{}
 	f.lastMeta, f.lastSetup, f.lastField = time.Time{}, time.Time{}, time.Time{}
@@ -392,9 +402,40 @@ func (f *Feed) collectSample(now time.Time, h f1udp.Header, v *f1udp.PacketCarTe
 		st := f.status.CarStatusData[i]
 		s.ERSStore, s.ERSMode, s.Fuel = st.ERSStoreEnergy, int(st.ERSDeployMode), st.FuelInTank
 	}
+	ex := map[string]any{
+		"engTemp": int(t.EngineTemperature),
+		"brakes":  []int{int(t.BrakesTemperature[0]), int(t.BrakesTemperature[1]), int(t.BrakesTemperature[2]), int(t.BrakesTemperature[3])},
+		"tSurf":   []int{int(t.TyresSurfaceTemperature[0]), int(t.TyresSurfaceTemperature[1]), int(t.TyresSurfaceTemperature[2]), int(t.TyresSurfaceTemperature[3])},
+		"tInner":  []int{int(t.TyresInnerTemperature[0]), int(t.TyresInnerTemperature[1]), int(t.TyresInnerTemperature[2]), int(t.TyresInnerTemperature[3])},
+	}
 	if f.motion != nil {
 		m := f.motion.CarMotionData[i]
 		s.PosX, s.PosZ = m.WorldPositionX, m.WorldPositionZ
+		ex["yaw"] = m.Yaw * (180 / 3.14159265)
+	}
+	if f.status != nil {
+		st := f.status.CarStatusData[i]
+		ex["bias"] = int(st.FrontBrakeBias)
+		ex["harvest"] = st.ERSHarvestedThisLapMGUK + st.ERSHarvestedThisLapMGUH
+		if st.ERSHarvestLimitPerLap > 0 {
+			ex["harvestLim"] = st.ERSHarvestLimitPerLap
+		}
+	}
+	if f.telemetry2 != nil {
+		ex["aero"] = int(f.telemetry2.CarTelemetry2Data[i].ActiveAeroMode)
+	}
+	if f.damage != nil {
+		w := f.damage.CarDamageData[i].TyresWear
+		ex["wear"] = []float32{w[0], w[1], w[2], w[3]}
+	}
+	if f.motionEx != nil {
+		ex["cog"] = f.motionEx.HeightOfCOGAboveGround
+		ex["yawRate"] = f.motionEx.AngularVelocityY * (180 / 3.14159265)
+		sp := f.motionEx.SuspensionPosition
+		ex["susp"] = []float32{sp[0], sp[1], sp[2], sp[3]}
+	}
+	if b, err := json.Marshal(ex); err == nil {
+		s.Extra = b
 	}
 	f.samples = append(f.samples, s)
 }

@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS samples (
     pos_z        REAL
 );
 CREATE INDEX IF NOT EXISTS samples_session_lap ON samples (session_id, lap_num, time);
+ALTER TABLE samples ADD COLUMN IF NOT EXISTS extra JSONB;
 
 -- Team members, signed in with Discord.
 CREATE TABLE IF NOT EXISTS users (

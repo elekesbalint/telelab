@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lap comparison · TeleLab by Bálint Elekes & Tamás Gál</title>
+<title>Driver Comparison · TeleLab by Bálint Elekes & Tamás Gál</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet">
@@ -15,28 +15,46 @@
 <div class="maincol">
 <header class="bar">
   <a class="brand" href="/">Tele<span>Lab</span></a>
-  <span class="session"></span>
+  <div id="feed-pick"></div>
+  <p class="session" id="session"></p>
   <div class="userbox" id="me"></div>
 </header>
 <main class="cmp">
-  <p class="back"><a id="back" href="/sessions.html">Back to the session</a></p>
-
-  <div class="cmp-head">
-    <section class="lapcard a" id="card-a"></section>
-    <section class="lapcard b" id="card-b"></section>
-    <section class="panel verdict" id="verdict"></section>
-  </div>
-
-  <div class="cmp-body">
-    <div class="charts" id="charts"></div>
-    <aside class="panel map">
-      <h2>Who was faster around the lap</h2>
-      <canvas id="map" aria-label="Track map: the line colour shows which lap gained time on each part of the track"></canvas>
-      <ul class="legend-row"><li class="ka">A gained time</li><li class="kb">B gained time</li></ul>
-      <dl class="kv" id="readout"></dl>
+  <nav class="cmp-tabs" aria-label="Comparison views">
+    <a id="tab-timing" href="/sessions.html">Timing table</a>
+    <a id="tab-setup" href="#">Setup</a>
+    <a class="on" href="/compare.html">Inputs</a>
+  </nav>
+  <div class="cmp-drivers" id="drivers"></div>
+  <div class="cmp-stage">
+    <aside class="cmp-left">
+      <section class="cmp-mapbox">
+        <div class="cmp-maphead">
+          <h2>Track position</h2>
+          <div class="cmp-maptools">
+            <button type="button" class="cmp-icon" id="play" title="Play">▶</button>
+            <button type="button" class="cmp-icon" id="reset-zoom" title="Reset zoom">↺</button>
+          </div>
+        </div>
+        <canvas id="map" aria-label="Track map"></canvas>
+      </section>
+      <section class="cmp-lines">
+        <h2>Racing lines</h2>
+        <p>Racing lines coming soon for this track.<br>Needs its reference laps recording in geo-track-maps.</p>
+      </section>
     </aside>
+    <div class="cmp-right">
+      <div class="cmp-tip" id="tip" hidden></div>
+      <div id="charts"></div>
+    </div>
   </div>
 </main>
+<div class="trk-modal" id="modal" hidden>
+  <div class="trk-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header><h2 id="modal-title">Setup</h2><button type="button" class="btn" id="modal-close">×</button></header>
+    <div id="modal-body"></div>
+  </div>
+</div>
 <script src="vendor/uPlot.iife.min.js"></script>
 <script type="module" src="compare.js"></script>
 </div>

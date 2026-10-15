@@ -224,39 +224,85 @@ table.clickable tbody tr:hover td, table.clickable tbody tr:focus td { backgroun
 .uplot { font-family: var(--text); }
 .u-select { background: rgb(255 178 36 / .12); }
 
-/* compare */
-.cmp { max-width: 1600px; }
-.cmp-head { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 16px; margin: 8px 0 16px; }
-.lapcard { background: var(--panel); border-radius: 10px; padding: 16px 20px; border-top: 4px solid var(--k); }
-.lapcard.a { --k: var(--amber); } .lapcard.b { --k: var(--cold); }
-.lapcard h2, .verdict h2 { font: 600 18px/1.2 var(--num); margin: 0; display: flex; align-items: center; gap: 10px; }
-.tag { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--k); color: var(--asphalt); font: 700 14px var(--num); }
-.big { font: 600 38px/1.1 var(--num); margin: 6px 0 2px; }
-.meta { color: var(--dim); font-size: 13px; margin: 0; }
-.ka { color: var(--amber); } .kb { color: var(--cold); }
-.pick { margin-top: 12px; }
-.pick summary { cursor: pointer; color: var(--dim); font-size: 13px; }
-.pick[open] { display: grid; gap: 10px; }
-.pick .primary { justify-self: start; }
-.cmp-body { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
-.charts { display: grid; gap: 10px; min-width: 0; }
-.chart-box { padding: 10px 14px 6px; }
-.chart-box h3 { font: 500 14px var(--text); color: var(--dim); margin: 0 0 4px; display: flex; justify-content: space-between; }
-.chart-box .val b { font: 600 15px var(--num); margin-left: 12px; }
-.map { position: sticky; top: 16px; }
-.map h2 { font-size: 16px; }
-.map canvas { width: 100%; height: 340px; display: block; }
-.legend-row { list-style: none; padding: 0; margin: 10px 0 0; display: flex; gap: 16px; font-size: 13px; color: var(--dim); }
-.legend-row li::before { content: ""; display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
-.legend-row .ka::before { background: var(--amber); } .legend-row .kb::before { background: var(--cold); }
+/* compare · Inputs */
+.cmp { max-width: none; padding: 8px 18px 40px; }
+.cmp-tabs { display: flex; gap: 2px; margin: 0 0 12px; border-bottom: 1px solid var(--line); }
+.cmp-tabs a {
+  color: var(--dim); text-decoration: none; padding: 8px 12px; font: 600 12px var(--num);
+  letter-spacing: .04em; text-transform: uppercase; border-bottom: 2px solid transparent;
+}
+.cmp-tabs a:hover { color: var(--chalk); }
+.cmp-tabs a.on { color: var(--chalk); border-bottom-color: var(--amber); }
+.cmp-drivers { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 12px; }
+.cmp-drv {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  background: var(--panel); border-radius: 10px; padding: 8px 12px; flex: 1; min-width: 280px;
+  border-left: 3px solid var(--k, var(--cold));
+}
+.cmp-drv.empty { color: var(--dim); }
+.cmp-who { font: 700 10px var(--num); letter-spacing: .08em; text-transform: uppercase; color: var(--k); }
+.cmp-drv strong { font: 600 14px var(--num); }
+.cmp-lapmeta { color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cmp-tyre {
+  display: inline-block; padding: 1px 7px; border-radius: 999px; font: 700 10px var(--num);
+  background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); border: 1px solid var(--c);
+}
+.cmp-sects { font: 600 12px var(--mono); color: var(--chalk); }
+.cmp-sects em { font-style: normal; color: var(--dim); margin-left: 8px; font: 700 10px var(--num); }
+.cmp-x {
+  margin-left: auto; background: none; border: 0; color: var(--dim); font-size: 18px; cursor: pointer; line-height: 1;
+}
+.cmp-x:hover { color: var(--chalk); }
+.cmp-pick { margin-left: auto; }
+.cmp-pick summary { cursor: pointer; color: var(--dim); font-size: 12px; }
+.cmp-pick[open] { display: grid; gap: 8px; background: var(--tile); padding: 8px; border-radius: 8px; }
+.cmp-pick label { display: grid; gap: 4px; font-size: 12px; color: var(--dim); }
+.cmp-pick select {
+  background: var(--asphalt); color: var(--chalk); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 8px; font: inherit;
+}
+.cmp-stage {
+  display: grid; grid-template-columns: minmax(260px, 36%) minmax(0, 1fr);
+  gap: 14px; align-items: start;
+}
+.cmp-left { position: sticky; top: 12px; display: grid; gap: 12px; }
+.cmp-mapbox, .cmp-lines { background: var(--panel); border-radius: 12px; padding: 12px 14px; }
+.cmp-maphead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cmp-mapbox h2, .cmp-lines h2, .cmp-chart h3 {
+  font: 700 11px var(--num); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--cold); margin: 0 0 8px;
+}
+.cmp-chart h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cmp-maptools { display: flex; gap: 4px; }
+.cmp-icon {
+  background: var(--tile); border: 1px solid var(--line); color: var(--chalk);
+  border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 12px;
+}
+.cmp-icon:hover { border-color: var(--dim); }
+.cmp-mapbox canvas { width: 100%; height: 280px; display: block; }
+.cmp-lines p { margin: 24px 8px; color: var(--dim); font-size: 13px; text-align: center; }
+.cmp-right { min-width: 0; position: relative; }
+.cmp-chart { padding: 2px 0 6px; }
+.cmp-chart .plot { width: 100%; }
+.cmp-wleg { display: inline-flex; gap: 8px; color: var(--dim); font: 600 10px var(--num); letter-spacing: .04em; text-transform: none; }
+.cmp-wleg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+.cmp-hint { color: var(--dim); font: 500 11px var(--text); letter-spacing: 0; text-transform: none; margin-left: auto; }
+.cmp-tip {
+  position: fixed; z-index: 30; pointer-events: none;
+  background: rgb(12 14 18 / .92); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: 12px/1.4 var(--text); color: var(--chalk);
+  box-shadow: 0 8px 24px rgb(0 0 0 / .4); max-width: 420px;
+}
+.cmp-tip b { color: var(--cold); }
+.cmp .lead { color: var(--dim); max-width: 52ch; }
+.cmp .uplot { font-family: var(--text); }
+.cmp .u-cursor-pt { pointer-events: none; }
+.cmp .u-cursor-x { border-right: 1px solid var(--brk); }
 
 @media (max-width: 1100px) {
-  .cmp-head { grid-template-columns: 1fr 1fr; }
-  .verdict { grid-column: 1 / -1; }
-  .cmp-body { grid-template-columns: 1fr; }
-  .map { position: static; }
+  .cmp-stage { grid-template-columns: 1fr; }
+  .cmp-left { position: static; }
 }
-@media (max-width: 640px) { .cmp-head { grid-template-columns: 1fr; } }
 
 /* ---------- active session picker ---------- */
 /* Center the active-session picker in the top bar (SetupLab-style). */

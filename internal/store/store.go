@@ -204,6 +204,7 @@ type Sample struct {
 	ERSMode     int
 	Fuel        float32
 	PosX, PosZ  float32
+	Extra       []byte // JSON: temps, wear, aero, ride height — nil on older rows
 }
 
 // InsertSamples bulk-loads samples with COPY.
@@ -217,13 +218,17 @@ func (s *Store) InsertSamples(ctx context.Context, sessionID int64, rows []Sampl
 	}
 	defer tx.Rollback()
 	stmt, err := tx.PrepareContext(ctx, pq.CopyIn("samples", "time", "session_id", "lap_num", "lap_distance",
-		"speed", "throttle", "brake", "steer", "gear", "rpm", "drs", "ers_store", "ers_mode", "fuel", "pos_x", "pos_z"))
+		"speed", "throttle", "brake", "steer", "gear", "rpm", "drs", "ers_store", "ers_mode", "fuel", "pos_x", "pos_z", "extra"))
 	if err != nil {
 		return err
 	}
 	for _, r := range rows {
+		var extra any
+		if len(r.Extra) > 0 {
+			extra = string(r.Extra)
+		}
 		if _, err := stmt.ExecContext(ctx, r.Time, sessionID, r.LapNum, r.LapDistance, r.Speed, r.Throttle, r.Brake,
-			r.Steer, r.Gear, r.RPM, r.DRS, r.ERSStore, r.ERSMode, r.Fuel, r.PosX, r.PosZ); err != nil {
+			r.Steer, r.Gear, r.RPM, r.DRS, r.ERSStore, r.ERSMode, r.Fuel, r.PosX, r.PosZ, extra); err != nil {
 			return err
 		}
 	}
